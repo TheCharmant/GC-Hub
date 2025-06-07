@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../packages/api/node_modules/.prisma/client"
+}
+
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  student
+  club
+  organizer
+  admin
+}
+
+enum ReportType {
+  event_summary
+  attendance
+  hours
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdEvents Event[]             @relation("UserCreatedEvents")
+  registrations EventRegistration[]
+  club          Club?               @relation("ClubLeader") // <-- no fields/references here
+  reports       Report[]
+  notifications Notification[]
+  stat          Stat?
+}
+
+model Club {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String
+  leaderId    String   @unique
+  leader      User     @relation("ClubLeader", fields: [leaderId], references: [id]) // <-- define fields+refs here
+  events      Event[]
+  createdAt   DateTime @default(now())
+}
+
+model Event {
+  id            String              @id @default(uuid())
+  title         String
+  description   String
+  date          DateTime
+  startTime     String
+  endTime       String
+  location      String
+  approved      Boolean             @default(false)
+  createdById   String
+  createdBy     User                @relation("UserCreatedEvents", fields: [createdById], references: [id])
+  clubId        String?
+  club          Club?               @relation(fields: [clubId], references: [id])
+  registrations EventRegistration[]
+  createdAt     DateTime            @default(now())
+}
+
+model EventRegistration {
+  id           String   @id @default(uuid())
+  eventId      String
+  userId       String
+  event        Event    @relation(fields: [eventId], references: [id])
+  user         User     @relation(fields: [userId], references: [id])
+  registeredAt DateTime @default(now())
+  attended     Boolean  @default(false)
+  hoursEarned  Float?
+}
+
+model Report {
+  id          String     @id @default(uuid())
+  userId      String
+  generatedBy User       @relation(fields: [userId], references: [id])
+  type        ReportType
+  filters     Json
+  fileUrl     String
+  createdAt   DateTime   @default(now())
+}
+
+model Stat {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id])
+  totalEvents Int      @default(0)
+  totalHours  Float    @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  seen      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+
