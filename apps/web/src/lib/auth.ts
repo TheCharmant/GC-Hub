@@ -40,15 +40,43 @@ export const logout = () => {
 // Make authenticated API requests
 export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   const token = getAuthToken();
+  const user = getCurrentUser();
   
   const headers = {
     ...options.headers,
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(user ? { 'user-id': user.id, 'user-role': user.role } : {})
   };
   
   return fetch(url, {
     ...options,
     headers
   });
+};
+
+// API base URL
+export const API_BASE_URL = 'http://localhost:3001';
+
+// Create a wrapper for API calls
+export const api = {
+  get: (endpoint: string) => 
+    fetchWithAuth(`${API_BASE_URL}${endpoint}`),
+  
+  post: (endpoint: string, data: any) => 
+    fetchWithAuth(`${API_BASE_URL}${endpoint}`, {
+      method: 'POST',
+      body: JSON.stringify(data)
+    }),
+  
+  put: (endpoint: string, data: any) => 
+    fetchWithAuth(`${API_BASE_URL}${endpoint}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+  
+  delete: (endpoint: string) => 
+    fetchWithAuth(`${API_BASE_URL}${endpoint}`, {
+      method: 'DELETE'
+    })
 };

@@ -1,95 +1,101 @@
 import { Router } from 'express';
 import { prisma } from '@lib/prisma';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
 
-// GET /api/admin/dashboard — System-wide overview
-router.get('/dashboard', async (_req, res) => {
+// GET /api/admin/dashboard - Get admin dashboard data
+router.get('/dashboard', authenticate, authorize(['admin']), async (req, res) => {
   try {
-    // In production, verify user is admin
-    
-    // Get counts
-    const userCount = await prisma.user.count();
-    const clubCount = await prisma.club.count();
-    const eventCount = await prisma.event.count();
-    const registrationCount = await prisma.eventRegistration.count();
-    
-    // Get recent events
-    const recentEvents = await prisma.event.findMany({
-      orderBy: {
-        date: 'desc'
-      },
-      take: 5,
-      include: {
-        club: true,
-        createdBy: {
-          select: {
-            id: true,
-            name: true
-          }
-        }
-      }
-    });
-    
-    // Get user distribution by role
-    const usersByRole = await prisma.user.groupBy({
-      by: ['role'],
-      _count: {
-        role: true
-      }
-    });
-    
+    // Get total counts for dashboard
+    const [
+      totalUsers,
+      totalClubs,
+      totalEvents,
+      pendingEvents
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.club.count(),
+      prisma.event.count(),
+      prisma.event.count({
+        where: { approved: false }
+      })
+    ]);
+
     res.json({
-      counts: {
-        users: userCount,
-        clubs: clubCount,
-        events: eventCount,
-        registrations: registrationCount
-      },
-      recentEvents,
-      usersByRole: usersByRole.map(item => ({
-        role: item.role,
-        count: item._count.role
-      }))
+      stats: {
+        totalUsers,
+        totalClubs,
+        totalEvents,
+        pendingEvents
+      }
     });
   } catch (error) {
-    console.error('Error fetching admin dashboard:', error);
-    res.status(500).json({ error: 'Failed to fetch admin dashboard' });
+    console.error('Admin dashboard error:', error);
+    res.status(500).json({ error: 'Failed to fetch dashboard data' });
   }
 });
 
-// GET /api/admin/users — List all users
-router.get('/users', async (_req, res) => {
+// GET /api/admin/users - Get all users with their roles
+router.get('/users', authenticate, authorize(['admin']), async (req, res) => {
   try {
-    // In production, verify user is admin
-    
     const users = await prisma.user.findMany({
       select: {
         id: true,
-        email: true,
         name: true,
+        email: true,
         role: true,
         createdAt: true,
         updatedAt: true
       }
     });
-    
+
     res.json(users);
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Admin users error:', error);
     res.status(500).json({ error: 'Failed to fetch users' });
   }
 });
 
-// GET /api/admin/events — List all events
-router.get('/events', async (_req, res) => {
+// GET /api/admin/events - Get all events with approval status
+router.get('/events', authenticate, authorize(['admin']), async (req, res) => {
   try {
-    // In production, verify user is admin
-    
     const events = await prisma.event.findMany({
       include: {
-        club: true,
-        createdBy: {
+        club: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    res.json(events);
+  } catch (error) {
+    console.error('Admin events error:', error);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+// PATCH /api/admin/events/{eventId}/approve - Approve an event
+router.patch('/events/:eventId/approve', authenticate, authorize(['admin']), async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { approved } = req.body;
+
+    if (typeof approved !== 'boolean') {
+      return res.status(400).json({ error: 'Invalid approval status' });
+    }
+
+    const event = await prisma.event.update({
+      where: { id: eventId },
+      data: { approved },
+      include: {
+        club: {
           select: {
             id: true,
             name: true
@@ -97,30 +103,11 @@ router.get('/events', async (_req, res) => {
         }
       }
     });
-    
-    res.json(events);
-  } catch (error) {
-    console.error('Error fetching events:', error);
-    res.status(500).json({ error: 'Failed to fetch events' });
-  }
-});
 
-// PATCH /api/admin/events/:id/approve — Approve/publish event
-router.patch('/events/:id/approve', async (req, res) => {
-  try {
-    const { approved } = req.body;
-    
-    // In production, verify user is admin
-    
-    const updatedEvent = await prisma.event.update({
-      where: { id: req.params.id },
-      data: { approved }
-    });
-    
-    res.json(updatedEvent);
+    res.json(event);
   } catch (error) {
-    console.error('Error approving event:', error);
-    res.status(500).json({ error: 'Failed to approve event' });
+    console.error('Admin event approval error:', error);
+    res.status(500).json({ error: 'Failed to update event approval status' });
   }
 });
 

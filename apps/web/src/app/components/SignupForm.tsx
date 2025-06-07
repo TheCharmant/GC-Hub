@@ -3,29 +3,37 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 
 type SignupFormProps = {
   role: string
   fieldLabel?: string
+  redirectPath?: string
 }
 
-export default function SignupForm({ role, fieldLabel = 'Email' }: SignupFormProps) {
+export default function SignupForm({ role, fieldLabel = 'Email', redirectPath }: SignupFormProps) {
   const [email, setEmail] = useState('')
-  const [name, setName] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [name, setName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      setIsLoading(false)
+      return
+    }
     
     try {
-      // Call signup API
       const response = await fetch('http://localhost:3001/api/auth/signup', {
         method: 'POST',
         headers: {
@@ -33,9 +41,9 @@ export default function SignupForm({ role, fieldLabel = 'Email' }: SignupFormPro
         },
         body: JSON.stringify({
           email,
-          name,
           password,
-          role: role.toLowerCase(),
+          name,
+          role: role.toLowerCase()
         }),
       })
       
@@ -45,10 +53,17 @@ export default function SignupForm({ role, fieldLabel = 'Email' }: SignupFormPro
         throw new Error(data.error || 'Failed to sign up')
       }
       
-      // Redirect to login page with the same role
-      router.push(`/login/${role.toLowerCase()}`)
+      // Use AuthContext login function to automatically log in after signup
+      login(data.user, data.token, true)
+      
+      // Redirect to specified path or default based on role
+      if (redirectPath) {
+        router.push(redirectPath)
+      } else {
+        router.push(`/dashboard/${data.user.role.toLowerCase()}`)
+      }
     } catch (err: unknown) {
-      setError((err as Error).message)
+      setError(err instanceof Error ? err.message : 'An error occurred during signup')
     } finally {
       setIsLoading(false)
     }
@@ -64,7 +79,7 @@ export default function SignupForm({ role, fieldLabel = 'Email' }: SignupFormPro
           height={60} 
           className="mx-auto mb-4"
         />
-        <h2 className="text-2xl font-bold">Sign Up as {role}</h2>
+        <h2 className="text-2xl font-bold">Create {role} Account</h2>
       </div>
       
       {error && (
@@ -91,12 +106,12 @@ export default function SignupForm({ role, fieldLabel = 'Email' }: SignupFormPro
             />
           </div>
         </div>
-        
+
         <div className="mb-4">
           <div className="flex items-center border rounded-md bg-gray-100 px-3 py-2">
             <span className="text-gray-500 mr-2">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
               </svg>
             </span>
             <input
@@ -143,17 +158,23 @@ export default function SignupForm({ role, fieldLabel = 'Email' }: SignupFormPro
             </button>
           </div>
         </div>
-        
-        <div className="mb-6 text-center">
-          <p className="text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link 
-              href={`/login/${role.toLowerCase()}`} 
-              className="text-purple-600 hover:underline"
-            >
-              Log in
-            </Link>
-          </p>
+
+        <div className="mb-6">
+          <div className="flex items-center border rounded-md bg-gray-100 px-3 py-2">
+            <span className="text-gray-500 mr-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </span>
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="Confirm Password"
+              className="bg-transparent w-full outline-none"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </div>
         </div>
         
         <button
@@ -161,9 +182,11 @@ export default function SignupForm({ role, fieldLabel = 'Email' }: SignupFormPro
           className="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 transition-colors"
           disabled={isLoading}
         >
-          {isLoading ? 'Signing up...' : 'Sign Up'}
+          {isLoading ? "Creating Account..." : "Sign Up"}
         </button>
       </form>
     </div>
   )
 }
+
+

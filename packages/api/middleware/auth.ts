@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Use environment variable in production
+// Use a consistent JWT secret across the application
+export const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Extend Express Request type to include user property
 declare global {
@@ -38,7 +39,19 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({ 
+        error: 'Token expired',
+        code: 'TOKEN_EXPIRED'
+      });
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(401).json({ 
+        error: 'Invalid token',
+        code: 'INVALID_TOKEN'
+      });
+    }
+    return res.status(401).json({ error: 'Authentication failed' });
   }
 };
 

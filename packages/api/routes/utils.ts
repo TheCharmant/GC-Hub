@@ -1,16 +1,16 @@
 import { Router } from 'express';
 import { prisma } from '@lib/prisma';
+import { Role } from '@prisma/client';
 
 const router = Router();
 
-// GET /api/utils/roles — List available roles
+// GET /api/utils/roles - Get all available roles
 router.get('/roles', async (_req, res) => {
   try {
-    // Return available roles from the Role enum
-    const roles = ['student', 'club', 'organizer', 'admin'];
+    const roles = Object.values(Role);
     res.json(roles);
   } catch (error) {
-    console.error('Error fetching roles:', error);
+    console.error('Roles fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch roles' });
   }
 });

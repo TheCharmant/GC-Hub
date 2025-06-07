@@ -3,10 +3,9 @@ import { prisma } from '@lib/prisma';
 
 const router = Router();
 
-// GET /api/profile — Get own profile
+// GET /api/profile - Get own profile
 router.get('/', async (req, res) => {
   try {
-    // In production, get user ID from JWT token
     const userId = req.headers['user-id'] as string;
     
     if (!userId) {
@@ -36,10 +35,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// PUT /api/profile — Update personal profile
+// PUT /api/profile - Update personal profile
 router.put('/', async (req, res) => {
   try {
-    // In production, get user ID from JWT token
     const userId = req.headers['user-id'] as string;
     
     if (!userId) {
@@ -68,10 +66,9 @@ router.put('/', async (req, res) => {
   }
 });
 
-// GET /api/profile/club — Club leader: get club info
+// GET /api/profile/club - Club leader: get club info
 router.get('/club', async (req, res) => {
   try {
-    // In production, get user ID from JWT token
     const userId = req.headers['user-id'] as string;
     
     if (!userId) {
@@ -101,10 +98,9 @@ router.get('/club', async (req, res) => {
   }
 });
 
-// PUT /api/profile/club — Club leader: update club info
+// PUT /api/profile/club - Club leader: update club info
 router.put('/club', async (req, res) => {
   try {
-    // In production, get user ID from JWT token
     const userId = req.headers['user-id'] as string;
     
     if (!userId) {
@@ -124,7 +120,14 @@ router.put('/club', async (req, res) => {
     
     const updatedClub = await prisma.club.update({
       where: { id: club.id },
-      data: { name, description }
+      data: { name, description },
+      include: {
+        events: {
+          orderBy: {
+            date: 'desc'
+          }
+        }
+      }
     });
     
     res.json(updatedClub);

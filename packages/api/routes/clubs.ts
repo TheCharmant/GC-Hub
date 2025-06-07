@@ -84,16 +84,11 @@ router.post('/', async (req, res) => {
   try {
     const { name, description, leaderId } = req.body;
 
-    // Simulate getting user ID and role from auth headers / token
+    // Simulate getting user ID from auth headers / token
     const userId = req.headers['user-id'] as string;
-    const userRole = req.headers['user-role'] as string;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized: Missing user ID' });
-    }
-
-    if (userRole !== 'admin') {
-      return res.status(403).json({ error: 'Forbidden: Admins only' });
     }
 
     // Optionally verify leaderId exists
@@ -122,7 +117,5 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: 'Failed to create club' });
   }
 });
-
-
 
 export default router;

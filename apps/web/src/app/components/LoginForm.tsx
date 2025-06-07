@@ -4,13 +4,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
 
 type LoginFormProps = {
   role: string
   fieldLabel?: string
+  redirectPath?: string
 }
 
-export default function LoginForm({ role, fieldLabel = 'Email' }: LoginFormProps) {
+export default function LoginForm({ role, fieldLabel = 'Email', redirectPath }: LoginFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
@@ -18,6 +20,7 @@ export default function LoginForm({ role, fieldLabel = 'Email' }: LoginFormProps
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,7 +28,6 @@ export default function LoginForm({ role, fieldLabel = 'Email' }: LoginFormProps
     setError('')
     
     try {
-      // Call login API
       const response = await fetch('http://localhost:3001/api/auth/login', {
         method: 'POST',
         headers: {
@@ -43,18 +45,15 @@ export default function LoginForm({ role, fieldLabel = 'Email' }: LoginFormProps
         throw new Error(data.error || 'Failed to log in')
       }
       
-      // Store token in localStorage or cookies
-      if (rememberMe) {
-        localStorage.setItem('authToken', data.token)
+      // Use AuthContext login function
+      login(data.user, data.token, rememberMe)
+      
+      // Redirect to specified path or default based on role
+      if (redirectPath) {
+        router.push(redirectPath)
       } else {
-        sessionStorage.setItem('authToken', data.token)
+        router.push(`/dashboard/${data.user.role.toLowerCase()}`)
       }
-      
-      // Store user data
-      localStorage.setItem('userData', JSON.stringify(data.user))
-      
-      // Redirect to dashboard based on user role
-      router.push(`/dashboard/${data.user.role.toLowerCase()}`)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred during login')
     } finally {
@@ -86,7 +85,7 @@ export default function LoginForm({ role, fieldLabel = 'Email' }: LoginFormProps
           <div className="flex items-center border rounded-md bg-gray-100 px-3 py-2">
             <span className="text-gray-500 mr-2">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
               </svg>
             </span>
             <input
@@ -148,18 +147,6 @@ export default function LoginForm({ role, fieldLabel = 'Email' }: LoginFormProps
           <a href="#" className="text-sm text-purple-600 hover:underline">Forgot password?</a>
         </div>
         
-        <div className="mb-6 text-center">
-          <p className="text-sm text-gray-600">
-            Don&apos;t have an account?{' '}
-            <Link 
-              href={`/signup/${role.toLowerCase()}`} 
-              className="text-purple-600 hover:underline"
-            >
-              Sign up
-            </Link>
-          </p>
-        </div>
-        
         <button
           type="submit"
           className="w-full bg-purple-600 text-white py-2 rounded-md hover:bg-purple-700 transition-colors"
@@ -171,3 +158,4 @@ export default function LoginForm({ role, fieldLabel = 'Email' }: LoginFormProps
     </div>
   )
 }
+

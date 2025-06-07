@@ -3,53 +3,43 @@ import { prisma } from '@lib/prisma';
 
 const router = Router();
 
-// GET /api/stats/user/:userId — Stats for a student
+// GET /api/stats/user/:userId - Stats for a student
 router.get('/user/:userId', async (req, res) => {
   try {
-    // Get user stats
+    const { userId } = req.params;
+
+    // Get user's stats
     const stats = await prisma.stat.findUnique({
-      where: { userId: req.params.userId }
+      where: { userId }
     });
-    
+
     if (!stats) {
       return res.json({
-        userId: req.params.userId,
+        userId,
         totalEvents: 0,
         totalHours: 0
       });
     }
-    
-    // Get recent events
-    const recentEvents = await prisma.eventRegistration.findMany({
-      where: {
-        userId: req.params.userId,
-        attended: true
-      },
-      include: {
-        event: true
-      },
-      orderBy: {
-        registeredAt: 'desc'
-      },
-      take: 5
-    });
-    
+
     res.json({
-      ...stats,
-      recentEvents
+      userId: stats.userId,
+      totalEvents: stats.totalEvents,
+      totalHours: stats.totalHours
     });
   } catch (error) {
     console.error('Error fetching user stats:', error);
-    res.status(500).json({ error: 'Failed to fetch user stats' });
+    res.status(500).json({ error: 'Failed to fetch user statistics' });
   }
 });
 
-// GET /api/stats/club/:clubId — Club-level participation stats
+// GET /api/stats/club/:clubId - Club-level participation stats
 router.get('/club/:clubId', async (req, res) => {
   try {
+    const { clubId } = req.params;
+
     // Get events by this club
     const events = await prisma.event.findMany({
-      where: { clubId: req.params.clubId }
+      where: { clubId }
     });
     
     const eventIds = events.map(event => event.id);
@@ -67,23 +57,25 @@ router.get('/club/:clubId', async (req, res) => {
     const totalHours = registrations.reduce((sum, reg) => sum + (reg.hoursEarned || 0), 0);
     
     res.json({
-      clubId: req.params.clubId,
+      clubId,
       totalEvents: events.length,
       totalAttendees,
       totalHours
     });
   } catch (error) {
     console.error('Error fetching club stats:', error);
-    res.status(500).json({ error: 'Failed to fetch club stats' });
+    res.status(500).json({ error: 'Failed to fetch club statistics' });
   }
 });
 
-// GET /api/stats/event/:eventId — Event-level stats
+// GET /api/stats/event/:eventId - Event-level stats
 router.get('/event/:eventId', async (req, res) => {
   try {
+    const { eventId } = req.params;
+    
     // Get registrations for this event
     const registrations = await prisma.eventRegistration.findMany({
-      where: { eventId: req.params.eventId }
+      where: { eventId }
     });
     
     // Calculate stats
@@ -92,7 +84,7 @@ router.get('/event/:eventId', async (req, res) => {
     const totalHours = registrations.reduce((sum, reg) => sum + (reg.hoursEarned || 0), 0);
     
     res.json({
-      eventId: req.params.eventId,
+      eventId,
       totalRegistered,
       totalAttended,
       totalHours,
@@ -100,7 +92,7 @@ router.get('/event/:eventId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching event stats:', error);
-    res.status(500).json({ error: 'Failed to fetch event stats' });
+    res.status(500).json({ error: 'Failed to fetch event statistics' });
   }
 });
 

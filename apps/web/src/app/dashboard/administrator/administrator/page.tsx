@@ -1,7 +1,16 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { useAuth } from '@/contexts/AuthContext'
 
-export default function AdminDashboard() {
+export default async function AdminDashboard() {
+  const { user, token } = useAuth();
+
+  const response = await fetch('http://localhost:3000/api/admin/dashboard', {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
   return (
     <div>
       <div className="mb-8">
