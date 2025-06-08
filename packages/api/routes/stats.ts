@@ -8,23 +8,62 @@ router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Get user's stats
-    const stats = await prisma.stat.findUnique({
-      where: { userId }
+    // Get user's registrations with event data
+    const registrations = await prisma.eventRegistration.findMany({
+      where: { userId },
+      include: {
+        event: {
+          include: {
+            club: true
+          }
+        }
+      },
+      orderBy: {
+        registeredAt: 'desc'
+      }
     });
 
-    if (!stats) {
-      return res.json({
-        userId,
-        totalEvents: 0,
-        totalHours: 0
-      });
-    }
+    // Calculate stats
+    const totalEvents = await prisma.event.count();
+    const registeredEvents = registrations.length;
+    const attendedEvents = registrations.filter(reg => reg.attended).length;
+    const upcomingEvents = registrations.filter(reg => !reg.attended && new Date(reg.event.date) > new Date()).length;
+    const totalHours = registrations.reduce((sum, reg) => sum + (reg.hoursEarned || 0), 0);
+
+    // Get favorite clubs (clubs with most attended events)
+    const clubAttendance = registrations
+      .filter(reg => reg.attended && reg.event?.club)
+      .reduce((acc, reg) => {
+        const clubId = reg.event.club?.id;
+        if (clubId) {
+          acc[clubId] = (acc[clubId] || 0) + 1;
+        }
+        return acc;
+      }, {} as Record<string, number>);
+
+    const favoriteClubs = Object.entries(clubAttendance)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5)
+      .map(([clubId]) => clubId);
+
+    // Get recent activity
+    const recentActivity = registrations.slice(0, 5).map(reg => ({
+      eventId: reg.event.id,
+      eventTitle: reg.event.title,
+      date: reg.event.date,
+      status: reg.attended ? 'attended' : 'registered',
+      hoursEarned: reg.hoursEarned || 0
+    }));
 
     res.json({
-      userId: stats.userId,
-      totalEvents: stats.totalEvents,
-      totalHours: stats.totalHours
+      userId,
+      totalEvents,
+      registeredEvents,
+      attendedEvents,
+      upcomingEvents,
+      totalHours,
+      favoriteClubs,
+      recentActivity
     });
   } catch (error) {
     console.error('Error fetching user stats:', error);

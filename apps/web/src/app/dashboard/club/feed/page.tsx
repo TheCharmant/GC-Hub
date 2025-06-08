@@ -20,10 +20,18 @@ interface Event {
   club?: Club;
 }
 
+interface Registration {
+  id: string;
+  eventId: string;
+  attended: boolean;
+}
+
 export default function ClubFeed() {
   const [events, setEvents] = useState<Event[]>([]);
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [registering, setRegistering] = useState<string | null>(null);
   const router = useRouter();
   const { user, token, isAuthenticated } = useAuth();
 
@@ -35,11 +43,12 @@ export default function ClubFeed() {
   }, [isAuthenticated, router]);
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    const fetchData = async () => {
       if (!isAuthenticated || !user) return;
 
       try {
-        const response = await fetch('http://localhost:3001/api/events', {
+        // Fetch events
+        const eventsResponse = await fetch('http://localhost:3001/api/events', {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
@@ -48,10 +57,23 @@ export default function ClubFeed() {
           }
         });
         
-        if (!response.ok) throw new Error('Failed to fetch events');
-        
-        const data = await response.json();
-        setEvents(data);
+        if (!eventsResponse.ok) throw new Error('Failed to fetch events');
+        const eventsData = await eventsResponse.json();
+        setEvents(eventsData);
+
+        // Fetch user's registrations
+        const registrationsResponse = await fetch(`http://localhost:3001/api/registrations/user/${user.id}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'X-User-ID': user.id,
+            'X-User-Role': user.role
+          }
+        });
+
+        if (!registrationsResponse.ok) throw new Error('Failed to fetch registrations');
+        const registrationsData = await registrationsResponse.json();
+        setRegistrations(registrationsData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -59,8 +81,42 @@ export default function ClubFeed() {
       }
     };
 
-    fetchEvents();
+    fetchData();
   }, [isAuthenticated, user, token]);
+
+  const handleRegister = async (eventId: string) => {
+    if (!isAuthenticated || !user || !token) return;
+    
+    setRegistering(eventId);
+    try {
+      const response = await fetch('http://localhost:3001/api/registrations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-User-ID': user.id,
+          'X-User-Role': user.role
+        },
+        body: JSON.stringify({ eventId })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to register for event');
+      }
+
+      const registration = await response.json();
+      setRegistrations(prev => [...prev, registration]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to register for event');
+    } finally {
+      setRegistering(null);
+    }
+  };
+
+  const isRegistered = (eventId: string) => {
+    return registrations.some(reg => reg.eventId === eventId);
+  };
 
   if (!isAuthenticated || !user) {
     return <div className="min-h-screen bg-gradient-to-r from-[#7a8c9e] to-[#a8a4c5] p-8">
@@ -103,9 +159,29 @@ export default function ClubFeed() {
               <p className="text-sm text-white/70 mb-4">
                 Organized by: {event.club?.name || 'Unknown'}
               </p>
-              <Link href={`/dashboard/club/event/${event.id}`} className="text-purple-300 hover:text-purple-100">
-                View Details →
-              </Link>
+              <div className="flex justify-between items-center">
+                <Link 
+                  href={`/dashboard/club/event/${event.id}`} 
+                  className="text-purple-300 hover:text-purple-100"
+                >
+                  View Details →
+                </Link>
+                {!isRegistered(event.id) ? (
+                  <button
+                    onClick={() => handleRegister(event.id)}
+                    disabled={registering === event.id}
+                    className={`px-4 py-2 rounded-md transition-colors ${
+                      registering === event.id
+                        ? 'bg-gray-500 cursor-not-allowed'
+                        : 'bg-purple-600 hover:bg-purple-700'
+                    } text-white`}
+                  >
+                    {registering === event.id ? 'Registering...' : 'Register'}
+                  </button>
+                ) : (
+                  <span className="text-green-400">✓ Registered</span>
+                )}
+              </div>
             </div>
           ))}
         </div>

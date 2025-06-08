@@ -81,7 +81,7 @@ export default function EventsPage() {
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       event.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.club.name.toLowerCase().includes(searchTerm.toLowerCase());
+      (event.club?.name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' ||
       (statusFilter === 'approved' && event.approved) ||
       (statusFilter === 'pending' && !event.approved);
@@ -107,9 +107,9 @@ export default function EventsPage() {
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Events</SelectItem>
-              <SelectItem value="approved">Approved</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem key="all" value="all">All Events</SelectItem>
+              <SelectItem key="approved" value="approved">Approved</SelectItem>
+              <SelectItem key="pending" value="pending">Pending</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -133,7 +133,7 @@ export default function EventsPage() {
                 <p>Date: {new Date(event.date).toLocaleDateString()}</p>
                 <p>Time: {event.startTime} - {event.endTime}</p>
                 <p>Location: {event.location}</p>
-                <p>Club: {event.club.name}</p>
+                <p>Club: {event.club?.name || 'No club assigned'}</p>
               </div>
               <div className="flex items-center justify-between">
                 <Badge variant={event.approved ? "success" : "warning"}>

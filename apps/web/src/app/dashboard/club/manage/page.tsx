@@ -14,6 +14,8 @@ interface Event {
   location: string;
   capacity: number;
   registrations?: number;
+  approved: boolean;
+  clubId: string;
 }
 
 export default function ManageEvents() {
@@ -24,6 +26,7 @@ export default function ManageEvents() {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [userClub, setUserClub] = useState<{ id: string; name: string } | null>(null);
   const [formData, setFormData] = useState<Partial<Event>>({
     title: '',
     description: '',
@@ -31,16 +34,18 @@ export default function ManageEvents() {
     startTime: '',
     endTime: '',
     location: '',
-    capacity: 0
+    capacity: 0,
+    clubId: ''
   });
 
   useEffect(() => {
+    fetchUserClub();
     fetchEvents();
   }, []);
 
-  const fetchEvents = async () => {
+  const fetchUserClub = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/events', {
+      const response = await fetch('http://localhost:3001/api/profile/club', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'X-User-ID': user?.id || '',
@@ -48,11 +53,35 @@ export default function ManageEvents() {
         }
       });
       
-      if (!response.ok) throw new Error('Failed to fetch events');
+      if (!response.ok) throw new Error('Failed to fetch club');
+      
+      const data = await response.json();
+      setUserClub(data);
+      setFormData(prev => ({ ...prev, clubId: data.id }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  };
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/events/my', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-User-ID': user?.id || '',
+          'X-User-Role': user?.role || ''
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch events');
+      }
       
       const data = await response.json();
       setEvents(data);
     } catch (err) {
+      console.error('Error fetching events:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -61,6 +90,11 @@ export default function ManageEvents() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userClub) {
+      setError('You must be a club leader to create events');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -68,6 +102,13 @@ export default function ManageEvents() {
       const url = selectedEvent 
         ? `http://localhost:3001/api/events/${selectedEvent.id}`
         : 'http://localhost:3001/api/events';
+      
+      const eventData = {
+        ...formData,
+        clubId: userClub.id
+      };
+
+      console.log('Submitting event data:', eventData);
       
       const response = await fetch(url, {
         method: selectedEvent ? 'PUT' : 'POST',
@@ -77,10 +118,16 @@ export default function ManageEvents() {
           'X-User-ID': user?.id || '',
           'X-User-Role': user?.role || ''
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(eventData)
       });
 
-      if (!response.ok) throw new Error('Failed to save event');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save event');
+      }
+      
+      const savedEvent = await response.json();
+      console.log('Saved event:', savedEvent);
       
       await fetchEvents();
       setIsModalOpen(false);
@@ -92,9 +139,11 @@ export default function ManageEvents() {
         startTime: '',
         endTime: '',
         location: '',
-        capacity: 0
+        capacity: 0,
+        clubId: userClub.id
       });
     } catch (err) {
+      console.error('Error saving event:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -103,6 +152,10 @@ export default function ManageEvents() {
 
   const handleDelete = async (eventId: string) => {
     if (!confirm('Are you sure you want to delete this event?')) return;
+    if (!userClub) {
+      setError('You must be a club leader to delete events');
+      return;
+    }
 
     try {
       const response = await fetch(`http://localhost:3001/api/events/${eventId}`, {
@@ -114,15 +167,23 @@ export default function ManageEvents() {
         }
       });
 
-      if (!response.ok) throw new Error('Failed to delete event');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete event');
+      }
       
       await fetchEvents();
     } catch (err) {
+      console.error('Error deleting event:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 
   const handleEdit = (event: Event) => {
+    if (!userClub || event.clubId !== userClub.id) {
+      setError('You can only edit events for your club');
+      return;
+    }
     setSelectedEvent(event);
     setFormData(event);
     setIsModalOpen(true);
@@ -146,7 +207,8 @@ export default function ManageEvents() {
               startTime: '',
               endTime: '',
               location: '',
-              capacity: 0
+              capacity: 0,
+              clubId: userClub?.id || ''
             });
             setIsModalOpen(true);
           }}
@@ -168,7 +230,16 @@ export default function ManageEvents() {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
             <div key={event.id} className="bg-white/10 backdrop-blur-sm p-6 rounded-lg shadow-md text-white">
-              <h2 className="text-xl font-semibold mb-2">{event.title}</h2>
+              <div className="flex justify-between items-start mb-2">
+                <h2 className="text-xl font-semibold">{event.title}</h2>
+                <span className={`px-2 py-1 rounded text-sm ${
+                  event.approved 
+                    ? 'bg-green-500/20 text-green-300' 
+                    : 'bg-yellow-500/20 text-yellow-300'
+                }`}>
+                  {event.approved ? 'Approved' : 'Pending'}
+                </span>
+              </div>
               <p className="text-white/80 mb-2">
                 {new Date(event.date).toLocaleDateString()} • {event.startTime}-{event.endTime}
               </p>
@@ -204,97 +275,107 @@ export default function ManageEvents() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-2xl font-bold mb-4">
-              {selectedEvent ? 'Edit Event' : 'Create Event'}
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-lg p-6 w-full max-w-2xl">
+            <h2 className="text-2xl font-bold text-white mb-4">
+              {selectedEvent ? 'Edit Event' : 'Create New Event'}
             </h2>
+            {userClub && (
+              <p className="text-purple-300 mb-4">
+                Creating event for: <span className="font-semibold">{userClub.name}</span>
+              </p>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700">Title</label>
+                <label className="block text-white mb-2">Title</label>
                 <input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                  className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
+                <label className="block text-white mb-2">Description</label>
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                  className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
+                  rows={3}
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Date</label>
+                  <label className="block text-white mb-2">Date</label>
                   <input
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Capacity</label>
+                  <label className="block text-white mb-2">Location</label>
                   <input
-                    type="number"
-                    value={formData.capacity}
-                    onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
                     required
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Start Time</label>
+                  <label className="block text-white mb-2">Start Time</label>
                   <input
                     type="time"
                     value={formData.startTime}
                     onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">End Time</label>
+                  <label className="block text-white mb-2">End Time</label>
                   <input
                     type="time"
                     value={formData.endTime}
                     onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
+                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-white mb-2">Capacity</label>
+                  <input
+                    type="number"
+                    value={formData.capacity}
+                    onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
+                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
+                    min="1"
                     required
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Location</label>
-                <input
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500"
-                  required
-                />
-              </div>
-              <div className="flex justify-end space-x-2">
+              <div className="flex justify-end space-x-4 mt-6">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setSelectedEvent(null);
+                  }}
+                  className="px-4 py-2 text-white hover:text-gray-300"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md"
                   disabled={loading}
+                  className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 disabled:bg-purple-800"
                 >
                   {loading ? 'Saving...' : selectedEvent ? 'Update Event' : 'Create Event'}
                 </button>

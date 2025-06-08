@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { prisma } from '@lib/prisma';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
 
@@ -104,6 +105,64 @@ router.patch('/:id', async (req, res) => {
   } catch (error) {
     console.error('Error updating registration:', error);
     res.status(500).json({ error: 'Failed to update registration' });
+  }
+});
+
+// POST /api/registrations — Register for an event
+router.post('/', authenticate, authorize(['student']), async (req, res) => {
+  try {
+    const { eventId } = req.body;
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!eventId) {
+      return res.status(400).json({ error: 'Event ID is required' });
+    }
+
+    // Check if event exists
+    const event = await prisma.event.findUnique({
+      where: { id: eventId }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    // Check if already registered
+    const existingRegistration = await prisma.eventRegistration.findFirst({
+      where: {
+        userId,
+        eventId
+      }
+    });
+
+    if (existingRegistration) {
+      return res.status(400).json({ error: 'Already registered for this event' });
+    }
+
+    // Create registration
+    const registration = await prisma.eventRegistration.create({
+      data: {
+        userId,
+        eventId,
+        attended: false,
+        hoursEarned: null
+      },
+      include: {
+        event: true
+      }
+    });
+
+    res.status(201).json(registration);
+  } catch (error) {
+    console.error('Error creating registration:', error);
+    if (error instanceof Error) {
+      return res.status(500).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Failed to register for event' });
   }
 });
 

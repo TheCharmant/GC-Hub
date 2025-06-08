@@ -8,6 +8,7 @@ import profileRoutes from './routes/profile';
 import adminRoutes from './routes/admin';
 import reportsRoutes from './routes/reports';
 import utilsRoutes from './routes/utils';
+import registrationsRoutes from './routes/registrations';
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/utils', utilsRoutes);
+app.use('/api/registrations', registrationsRoutes);
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 // Use a consistent JWT secret across the application
-export const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+export const JWT_SECRET = 'gc-hub-secret-key-2024';
 
 // Extend Express Request type to include user property
 declare global {

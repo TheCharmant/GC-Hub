@@ -1,13 +1,10 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../packages/api/node_modules/@prisma/client"
 }
-
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 enum Role {
@@ -24,20 +21,29 @@ enum ReportType {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  role         Role
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  role          Role      @default(student)
+  studentId     String?   @unique @map("student_id")
+  course        String?
+  year          Int?
+  section       String?
+  bio           String?
+  avatar        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
+  // Relations
   createdEvents Event[]             @relation("UserCreatedEvents")
   registrations EventRegistration[]
-  club          Club?               @relation("ClubLeader") // <-- no fields/references here
+  club          Club?               @relation("ClubLeader")
   reports       Report[]
   notifications Notification[]
   stat          Stat?
+
+  @@map("users")
 }
 
 model Club {
@@ -45,7 +51,7 @@ model Club {
   name        String   @unique
   description String
   leaderId    String   @unique
-  leader      User     @relation("ClubLeader", fields: [leaderId], references: [id]) // <-- define fields+refs here
+  leader      User     @relation("ClubLeader", fields: [leaderId], references: [id])
   events      Event[]
   createdAt   DateTime @default(now())
 }
@@ -82,7 +88,7 @@ model Report {
   id          String     @id @default(uuid())
   userId      String
   generatedBy User       @relation(fields: [userId], references: [id])
-  type        ReportType
+  type        String
   filters     Json
   fileUrl     String
   createdAt   DateTime   @default(now())
