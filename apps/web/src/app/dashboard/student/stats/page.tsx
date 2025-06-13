@@ -3,6 +3,14 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
+import {
+  LayoutGrid, // For Dashboard header
+  Award, // For Total Hours badge
+  Star, // For Events Attended stars
+  FileText, // For Total Certificates
+  Clock // For Upcoming Events
+} from 'lucide-react';
 
 interface UserStats {
   userId: string;
@@ -64,108 +72,101 @@ export default function StudentStats() {
   }, [isAuthenticated, user, token]);
 
   if (!isAuthenticated || !user) {
-    return <div className="min-h-screen bg-gradient-to-r from-[#7a8c9e] to-[#a8a4c5] p-8">
-      <div className="text-center text-white">Loading...</div>
-    </div>;
+    return <div className="text-center text-gray-700">Loading...</div>;
+  }
+
+  if (loading) {
+    return <div className="text-center text-gray-700">Loading statistics...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-[#7a8c9e] to-[#a8a4c5] p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <Image 
-            src="/gc-hub-logo.svg" 
-            alt="GC Hub Logo" 
-            width={150} 
-            height={60} 
-            className="mx-auto mb-4"
-          />
-          <h2 className="text-2xl font-bold text-white">Welcome, {user.name}!</h2>
-          <p className="text-white/80">Student ID: {user.id}</p>
-        </div>
+    <div className="max-w-7xl mx-auto py-6 bg-[#faf7ef]">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 flex items-center mb-2">
+          <LayoutGrid className="h-8 w-8 mr-2 text-gray-700" /> Dasboard
+        </h1>
+        <p className="text-gray-600">Track your volunteer hours</p>
+      </div>
 
-        <div className="mb-8 bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-          <h1 className="text-3xl font-bold text-white mb-2">My Statistics</h1>
-          <p className="text-white/80">Track your participation and achievements</p>
-        </div>
-
-        {loading && <p className="text-white">Loading statistics...</p>}
-        {error && <p className="text-red-500">Error: {error}</p>}
-        
-        {stats && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-2">Total Events</h3>
-                <p className="text-3xl font-bold text-white">{stats.totalEvents}</p>
+      {error && <p className="text-red-500 mb-4">Error: {error}</p>}
+      
+      {stats && (
+        <div className="space-y-6">
+          {/* Top Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Total Hours Card */}
+            <div className="bg-[#a8a4c5] p-6 rounded-lg shadow-md text-white flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Total Hours</h3>
+                <p className="text-5xl font-bold mb-2">{stats.totalHours} Hours</p>
+                <div className="flex items-center text-sm mb-4">
+                  <Award className="h-5 w-5 mr-1" />
+                  <span>ROOKIE VOLUNTEER</span>
+                </div>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-2">Registered Events</h3>
-                <p className="text-3xl font-bold text-white">{stats.registeredEvents}</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-2">Attended Events</h3>
-                <p className="text-3xl font-bold text-white">{stats.attendedEvents}</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-2">Upcoming Events</h3>
-                <p className="text-3xl font-bold text-white">{stats.upcomingEvents}</p>
-              </div>
+              <Link href="#" className="flex items-center justify-between text-white/80 hover:text-white transition-colors">
+                <span>Completed</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                <h3 className="text-xl font-bold text-white mb-4">Favorite Clubs</h3>
-                {stats.favoriteClubs.length > 0 ? (
-                  <ul className="space-y-2">
-                    {stats.favoriteClubs.map((clubId) => (
-                      <li key={clubId} className="text-white/80">
-                        {clubId}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-white/60">No favorite clubs yet</p>
-                )}
+            {/* Events Attended Card */}
+            <div className="bg-[#a8a4c5] p-6 rounded-lg shadow-md text-white flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Events Attended</h3>
+                <p className="text-5xl font-bold mb-2">{stats.attendedEvents} Events</p>
+                <div className="flex items-center mb-4">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className={`h-5 w-5 ${i < Math.min(stats.attendedEvents, 5) ? 'text-yellow-400' : 'text-gray-300'} mr-1`} fill="currentColor" />
+                  ))}
+                </div>
               </div>
+              <Link href="#" className="flex items-center justify-between text-white/80 hover:text-white transition-colors">
+                <span>Completed</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
 
-              <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-                <h3 className="text-xl font-bold text-white mb-4">Recent Activity</h3>
-                {stats.recentActivity.length > 0 ? (
-                  <ul className="space-y-4">
-                    {stats.recentActivity.map((activity) => (
-                      <li key={activity.eventId} className="text-white/80">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-semibold">{activity.eventTitle}</p>
-                            <p className="text-sm text-white/60">
-                              {new Date(activity.date).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <span className={`px-2 py-1 rounded text-sm ${
-                            activity.status === 'registered' 
-                              ? 'bg-yellow-500/20 text-yellow-300' 
-                              : 'bg-green-500/20 text-green-300'
-                          }`}>
-                            {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
-                          </span>
-                        </div>
-                        {activity.hoursEarned > 0 && (
-                          <p className="text-sm text-white/60 mt-1">
-                            Hours Earned: {activity.hoursEarned}
-                          </p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-white/60">No recent activity</p>
-                )}
+            {/* Total Certificates Card */}
+            <div className="bg-[#a8a4c5] p-6 rounded-lg shadow-md text-white flex flex-col justify-between">
+              <div>
+                <h3 className="text-lg font-medium mb-2">Total Certificates</h3>
+                <p className="text-5xl font-bold mb-2">{stats.totalEvents} Certificates</p> {/* Assuming totalEvents can represent certificates for now */}
+                <div className="flex items-center text-sm mb-4">
+                  <FileText className="h-5 w-5 mr-1" />
+                  <span>Certificates</span>
+                </div>
               </div>
+              <Link href="#" className="flex items-center justify-between text-white/80 hover:text-white transition-colors">
+                <span>See all</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Upcoming Events Card */}
+          <div className="bg-[#a8a4c5] p-6 rounded-lg shadow-md text-white max-w-sm">
+            <h3 className="text-lg font-medium mb-2">Upcoming Events</h3>
+            <p className="text-3xl font-bold mb-2">CCS Week</p>
+            <div className="flex items-center text-sm mb-4">
+              <Clock className="h-5 w-5 mr-1" />
+              <span>In 2 days at Room 305</span>
+            </div>
+            <Link href="#" className="flex items-center justify-between text-white/80 hover:text-white transition-colors">
+              <span>More Events</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

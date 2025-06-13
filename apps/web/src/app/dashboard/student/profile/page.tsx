@@ -3,6 +3,11 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import {
+  User as UserIcon,
+  UploadCloud,
+  Trash2
+} from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -14,13 +19,14 @@ interface Profile {
   section: string;
   bio?: string;
   avatar?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export default function StudentProfile() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Profile>>({});
   const router = useRouter();
   const { user, token, isAuthenticated } = useAuth();
@@ -47,8 +53,15 @@ export default function StudentProfile() {
         if (!response.ok) throw new Error('Failed to fetch profile');
         
         const data = await response.json();
+        const [firstName, ...lastNameParts] = (data.name || '').split(' ');
+        const lastName = lastNameParts.join(' ');
+
         setProfile(data);
-        setFormData(data);
+        setFormData({ 
+          ...data, 
+          firstName: firstName || '', 
+          lastName: lastName || '' 
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -59,13 +72,22 @@ export default function StudentProfile() {
     fetchProfile();
   }, [isAuthenticated, user, token]);
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isAuthenticated || !user) return;
 
     try {
-      // Validate required fields
-      if (!formData.name || !formData.email || !formData.course || !formData.year || !formData.section) {
+      const dataToSubmit = {
+        ...formData,
+        name: `${formData.firstName || ''} ${formData.lastName || ''}`.trim()
+      };
+
+      if (!dataToSubmit.name || !dataToSubmit.email || !dataToSubmit.course || !dataToSubmit.year || !dataToSubmit.section) {
         setError('Please fill in all required fields');
         return;
       }
@@ -76,7 +98,7 @@ export default function StudentProfile() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(dataToSubmit)
       });
       
       if (!response.ok) {
@@ -85,9 +107,15 @@ export default function StudentProfile() {
       }
       
       const data = await response.json();
+      const [firstName, ...lastNameParts] = (data.name || '').split(' ');
+      const lastName = lastNameParts.join(' ');
+
       setProfile(data);
-      setFormData(data);
-      setIsEditing(false);
+      setFormData({ 
+        ...data, 
+        firstName: firstName || '', 
+        lastName: lastName || '' 
+      });
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -95,174 +123,165 @@ export default function StudentProfile() {
   };
 
   if (!isAuthenticated || !user) {
-    return <div className="min-h-screen bg-gradient-to-r from-[#7a8c9e] to-[#a8a4c5] p-8">
-      <div className="text-center text-white">Loading...</div>
-    </div>;
+    return <div className="text-center text-gray-700">Loading...</div>;
+  }
+
+  if (loading) {
+    return <div className="text-center text-gray-700">Loading profile...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-[#7a8c9e] to-[#a8a4c5] p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8">
-          <Image 
-            src="/gc-hub-logo.svg" 
-            alt="GC Hub Logo" 
-            width={150} 
-            height={60} 
-            className="mx-auto mb-4"
-          />
-          <h2 className="text-2xl font-bold text-white">Welcome, {user.name}!</h2>
-          <p className="text-white/80">Student ID: {user.id}</p>
-        </div>
+    <div className="max-w-7xl mx-auto py-6 bg-[#faf7ef]">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 flex items-center mb-2">
+          <UserIcon className="h-8 w-8 mr-2 text-gray-700" /> Profile
+        </h1>
+        <p className="text-gray-600">See your profile information</p>
+      </div>
 
-        <div className="mb-8 bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-3xl font-bold text-white">My Profile</h1>
-            <button
-              onClick={() => {
-                setIsEditing(!isEditing);
-                setError(null);
-              }}
-              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-            >
-              {isEditing ? 'Cancel' : 'Edit Profile'}
-            </button>
-          </div>
-          <p className="text-white/80">Manage your personal information</p>
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+          <p>{error}</p>
         </div>
-
-        {loading && <p className="text-white">Loading profile...</p>}
-        {error && (
-          <div className="mb-4 p-4 bg-red-500/20 border border-red-500 rounded-md">
-            <p className="text-red-500">{error}</p>
-          </div>
-        )}
-        
-        {profile && (
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-            {isEditing ? (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-white/80 mb-2">Full Name *</label>
-                    <input
-                      type="text"
-                      value={formData.name || ''}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 mb-2">Email *</label>
-                    <input
-                      type="email"
-                      value={formData.email || ''}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 mb-2">Student ID</label>
-                    <input
-                      type="text"
-                      value={formData.studentId || ''}
-                      onChange={(e) => setFormData({ ...formData, studentId: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 mb-2">Course *</label>
-                    <input
-                      type="text"
-                      value={formData.course || ''}
-                      onChange={(e) => setFormData({ ...formData, course: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 mb-2">Year *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="4"
-                      value={formData.year || ''}
-                      onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-white/80 mb-2">Section *</label>
-                    <input
-                      type="text"
-                      value={formData.section || ''}
-                      onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                      className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      required
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-white/80 mb-2">Bio</label>
-                  <textarea
-                    value={formData.bio || ''}
-                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    rows={4}
-                    placeholder="Tell us about yourself..."
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <p className="text-white/60">Full Name</p>
-                    <p className="text-white text-lg">{profile.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/60">Email</p>
-                    <p className="text-white text-lg">{profile.email}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/60">Student ID</p>
-                    <p className="text-white text-lg">{profile.studentId || 'Not set'}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/60">Course</p>
-                    <p className="text-white text-lg">{profile.course || 'Not set'}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/60">Year</p>
-                    <p className="text-white text-lg">{profile.year || 'Not set'}</p>
-                  </div>
-                  <div>
-                    <p className="text-white/60">Section</p>
-                    <p className="text-white text-lg">{profile.section || 'Not set'}</p>
-                  </div>
-                </div>
-                {profile.bio && (
-                  <div>
-                    <p className="text-white/60">Bio</p>
-                    <p className="text-white">{profile.bio}</p>
-                  </div>
+      )}
+      
+      {profile && (
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">PERSONAL INFORMATION</h2>
+            
+            <div className="flex items-center mb-6">
+              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden mr-4">
+                {profile.avatar ? (
+                  <Image src={profile.avatar} alt="Profile Picture" width={96} height={96} className="object-cover" />
+                ) : (
+                  <UserIcon className="h-12 w-12 text-gray-500" />
                 )}
               </div>
-            )}
+              <div>
+                <p className="text-gray-800 font-semibold">Profile picture</p>
+                <p className="text-sm text-gray-500 mb-2">PNG, JPEG under 15MB</p>
+                <div className="flex space-x-2">
+                  <button type="button" className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors flex items-center">
+                    <UploadCloud className="h-4 w-4 mr-1" /> Upload new picture
+                  </button>
+                  <button type="button" className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors flex items-center">
+                    <Trash2 className="h-4 w-4 mr-1" /> Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">First name</label>
+                <input
+                  type="text"
+                  id="firstName"
+                  name="firstName"
+                  value={formData.firstName || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">Last name</label>
+                <input
+                  type="text"
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="studentId" className="block text-sm font-medium text-gray-700 mb-1">Student Number</label>
+                <input
+                  type="text"
+                  id="studentId"
+                  name="studentId"
+                  value={formData.studentId || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  disabled
+                />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address (Domain)</label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  disabled
+                />
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">EDUCATION</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="college" className="block text-sm font-medium text-gray-700 mb-1">College</label>
+                <input
+                  type="text"
+                  id="college"
+                  name="course"
+                  value={formData.course || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="program" className="block text-sm font-medium text-gray-700 mb-1">Program</label>
+                <input
+                  type="text"
+                  id="program"
+                  name="program"
+                  value={profile.course || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="yearLevel" className="block text-sm font-medium text-gray-700 mb-1">Year Level</label>
+                <input
+                  type="number"
+                  id="yearLevel"
+                  name="year"
+                  value={formData.year || ''}
+                  onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="block" className="block text-sm font-medium text-gray-700 mb-1">Block</label>
+                <input
+                  type="text"
+                  id="block"
+                  name="section"
+                  value={formData.section || ''}
+                  onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end mt-6">
+            <button
+              type="submit"
+              className="px-6 py-2 bg-[#a8a4c5] text-white font-semibold rounded-md hover:bg-[#8e8aab] transition-colors"
+            >
+              Save Changes
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

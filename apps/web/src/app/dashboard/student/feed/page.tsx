@@ -4,6 +4,18 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  Search,
+  Speaker,
+  CalendarDays,
+  Pencil,
+  ThumbsUp,
+  ThumbsDown,
+  Globe,
+  FileText
+} from 'lucide-react';
 
 interface Event {
   id: string;
@@ -21,13 +33,16 @@ interface Event {
   club: {
     id: string;
     name: string;
-  };
+    description: string;
+  } | null;
+  createdAt?: string;
 }
 
 export default function StudentFeed() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const router = useRouter();
   const { user, token, isAuthenticated } = useAuth();
 
@@ -47,8 +62,7 @@ export default function StudentFeed() {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
-            'X-User-ID': user.id,
-            'X-User-Role': user.role
+            'user-id': user.id
           }
         });
         
@@ -66,62 +80,85 @@ export default function StudentFeed() {
     fetchEvents();
   }, [isAuthenticated, user, token]);
 
+  const filteredEvents = events.filter(event =>
+    event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    event.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (!isAuthenticated || !user) {
-    return <div className="min-h-screen bg-gradient-to-r from-[#7a8c9e] to-[#a8a4c5] p-8">
-      <div className="text-center text-white">Loading...</div>
-    </div>;
+    return <div className="text-center text-gray-700">Loading...</div>;
   }
 
   if (loading) {
-    return <div className="min-h-screen bg-gradient-to-r from-[#7a8c9e] to-[#a8a4c5] p-8">
-      <div className="text-center text-white">Loading events...</div>
-    </div>;
+    return <div className="text-center text-gray-700">Loading events...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-r from-[#7a8c9e] to-[#a8a4c5] p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <Image 
-            src="/gc-hub-logo.svg" 
-            alt="GC Hub Logo" 
-            width={150} 
-            height={60} 
-            className="mx-auto mb-4"
+    <div className="max-w-7xl mx-auto py-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 flex items-center mb-2">
+          <FileText className="h-8 w-8 mr-2 text-gray-700" /> Feed
+        </h1>
+        <p className="text-gray-600">Stay updated with previous and upcoming events</p>
+        <div className="mt-4 relative flex justify-end">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Search..."
+            className="pl-4 pr-10 py-2 border border-gray-300 rounded-md w-full max-w-xs bg-transparent focus:outline-none focus:border-blue-500 placeholder-gray-400"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <h2 className="text-2xl font-bold text-white">Welcome, {user.name}!</h2>
-          <p className="text-white/80">Student ID: {user.id}</p>
         </div>
+      </div>
 
-        <div className="mb-8 bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-          <h1 className="text-3xl font-bold text-white mb-2">Event Feed</h1>
-          <p className="text-white/80">Browse and register for upcoming events</p>
-        </div>
-
-        {error && <p className="text-red-500">Error: {error}</p>}
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event) => (
-            <div key={event.id} className="bg-white/10 backdrop-blur-sm p-6 rounded-lg">
-              <h3 className="text-xl font-bold text-white mb-2">{event.title}</h3>
-              <p className="text-white/80 mb-4">{event.description}</p>
-              <div className="space-y-2 text-white/60">
-                <p>📅 {new Date(event.date).toLocaleDateString()}</p>
-                <p>⏰ {event.startTime} - {event.endTime}</p>
-                <p>📍 {event.location}</p>
-                <p>👥 Organizer: {event.club?.name || 'Unknown Club'}</p>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <Link 
-                  href={`/dashboard/student/events/${event.id}`}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
-                >
-                  View Details
-                </Link>
+      {error && <p className="text-red-500 mb-4">Error: {error}</p>}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+        {filteredEvents.length > 0 ? (
+          filteredEvents.map((event) => (
+            <div key={event.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+              <div className="p-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-2">{event.title}</h2>
+                <div className="flex items-center text-sm text-gray-500 mb-4">
+                  <Globe className="h-4 w-4 mr-1 text-gray-400" />
+                  <span>{event.club?.name || 'GC Student Council'}</span>
+                  <CalendarDays className="h-4 w-4 mr-1 ml-4 text-gray-400" />
+                  <span>Date Posted: {new Date(event.createdAt || event.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+                <p className="text-gray-700 mb-4 h-20 overflow-hidden text-ellipsis">{event.description}</p>
+                <div className="flex items-center text-sm text-gray-500 mb-4">
+                  <Pencil className="h-4 w-4 mr-1 text-gray-400" />
+                  <span>{event.createdBy.name} | {event.createdBy.email}</span>
+                </div>
+                <div className="h-48 bg-gray-100 mb-4 flex items-center justify-center rounded-md overflow-hidden">
+                  <Image src="/placeholder-event.png" alt="Event Image" width={200} height={150} className="object-cover w-full h-full" />
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center">
+                      <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600 p-0 h-auto transition-colors">
+                        <ThumbsUp className="h-5 w-5" />
+                      </Button>
+                      <span className="ml-1 text-gray-600">10</span>{/* Placeholder for likes */}
+                    </div>
+                    <div className="flex items-center">
+                      <Button variant="ghost" size="sm" className="text-gray-500 hover:text-red-600 p-0 h-auto transition-colors">
+                        <ThumbsDown className="h-5 w-5" />
+                      </Button>
+                      <span className="ml-1 text-gray-600">0</span>{/* Placeholder for dislikes */}
+                    </div>
+                  </div>
+                  <Link href={`/dashboard/student/events/${event.id}`} className="bg-gray-700 text-white px-4 py-2 rounded-md text-sm hover:bg-gray-800 transition-colors">
+                    See more
+                  </Link>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+          ))
+        ) : (
+          <p className="text-gray-700">No events found.</p>
+        )}
       </div>
     </div>
   );

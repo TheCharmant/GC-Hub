@@ -27,9 +27,9 @@ export default function AdminDashboard() {
             'Authorization': `Bearer ${token}`
           }
         });
-        
+
         if (!response.ok) throw new Error('Failed to fetch dashboard stats');
-        
+
         const data = await response.json();
         setStats(data.stats);
       } catch (err) {

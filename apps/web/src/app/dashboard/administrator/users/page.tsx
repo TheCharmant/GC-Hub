@@ -4,16 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
 
 interface User {
   id: string;
@@ -23,27 +14,29 @@ interface User {
   createdAt: string;
 }
 
-interface Role {
-  id: string;
-  name: string;
-}
-
 export default function UsersPage() {
   const { user, token } = useAuth();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
 
   useEffect(() => {
     if (token) {
       fetchUsers();
-      fetchRoles();
     }
   }, [token]);
+
+  useEffect(() => {
+    const filtered = users.filter(user => 
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.role.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredUsers(filtered);
+  }, [searchTerm, users]);
 
   const fetchUsers = async () => {
     try {
@@ -57,6 +50,7 @@ export default function UsersPage() {
       
       const data = await response.json();
       setUsers(data);
+      setFilteredUsers(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -64,78 +58,20 @@ export default function UsersPage() {
     }
   };
 
-  const fetchRoles = async () => {
-    try {
-      const response = await fetch('http://localhost:3001/api/utils/roles', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) throw new Error('Failed to fetch roles');
-      
-      const data = await response.json();
-      setRoles(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    }
-  };
-
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    try {
-      const response = await fetch(`http://localhost:3001/api/users/${userId}/role`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ role: newRole })
-      });
-
-      if (!response.ok) throw new Error('Failed to update user role');
-      
-      // Refresh users list
-      await fetchUsers();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    }
-  };
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-white">Manage Users</h1>
-        <div className="flex gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 w-64"
-            />
-          </div>
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Filter by role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {roles.map(role => (
-                <SelectItem key={role.id} value={role.name}>
-                  {role.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      </div>
+
+      <div className="flex items-center space-x-4">
+        <Input
+          type="text"
+          placeholder="Search users..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-sm bg-white/10 text-white border-white/20"
+        />
       </div>
 
       {error && (
@@ -155,25 +91,10 @@ export default function UsersPage() {
               <p className="text-sm text-white/70 mb-4">
                 Joined: {new Date(user.createdAt).toLocaleDateString()}
               </p>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center">
                 <Badge variant="outline" className="text-white">
                   {user.role}
                 </Badge>
-                <Select
-                  defaultValue={user.role}
-                  onValueChange={(value) => handleRoleChange(user.id, value)}
-                >
-                  <SelectTrigger className="w-[180px] bg-white/10 text-white border-white/20">
-                    <SelectValue placeholder="Change role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map((role) => (
-                      <SelectItem key={role.id} value={role.name}>
-                        {role.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           ))}

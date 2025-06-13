@@ -5,6 +5,16 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { isAuthenticated, getCurrentUser, logout } from '@/lib/auth'
+import {
+  Megaphone,
+  CalendarDays,
+  BarChart,
+  User2,
+  ArrowRight,
+  Users,
+  FileText,
+  Settings
+} from 'lucide-react'
 
 export default function DashboardLayout({
   children,
@@ -46,31 +56,31 @@ export default function DashboardLayout({
     switch (role) {
       case 'student':
         return [
-          { name: 'Feed', path: '/dashboard/student/feed', icon: 'rss' },
-          { name: 'Events', path: '/dashboard/student/events', icon: 'calendar' },
-          { name: 'Stats', path: '/dashboard/student/stats', icon: 'chart-bar' },
-          { name: 'Profile', path: '/dashboard/student/profile', icon: 'user' }
+          { name: 'Feed', path: '/dashboard/student/feed', icon: Megaphone },
+          { name: 'Events', path: '/dashboard/student/events', icon: CalendarDays },
+          { name: 'Stats', path: '/dashboard/student/stats', icon: BarChart },
+          { name: 'Profile', path: '/dashboard/student/profile', icon: User2 }
         ]
       case 'club':
         return [
-          { name: 'Feed', path: '/dashboard/club/feed', icon: 'rss' },
-          { name: 'Manage', path: '/dashboard/club/manage', icon: 'cog' },
-          { name: 'Stats', path: '/dashboard/club/stats', icon: 'chart-bar' },
-          { name: 'Profile', path: '/dashboard/club/profile', icon: 'user' }
+          { name: 'Feed', path: '/dashboard/club/feed', icon: Megaphone },
+          { name: 'Manage', path: '/dashboard/club/manage', icon: Settings },
+          { name: 'Stats', path: '/dashboard/club/stats', icon: BarChart },
+          { name: 'Profile', path: '/dashboard/club/profile', icon: User2 }
         ]
       case 'organizer':
         return [
-          { name: 'Feed', path: '/dashboard/organizer/feed', icon: 'rss' },
-          { name: 'Manage', path: '/dashboard/organizer/manage', icon: 'cog' },
-          { name: 'Reports', path: '/dashboard/organizer/reports', icon: 'document-text' },
-          { name: 'Profile', path: '/dashboard/organizer/profile', icon: 'user' }
+          { name: 'Feed', path: '/dashboard/organizer/feed', icon: Megaphone },
+          { name: 'Manage', path: '/dashboard/organizer/manage', icon: Settings },
+          { name: 'Reports', path: '/dashboard/organizer/reports', icon: FileText },
+          { name: 'Profile', path: '/dashboard/organizer/profile', icon: User2 }
         ]
       case 'administrator':
         return [
-          { name: 'Dashboard', path: '/dashboard/administrator/administrator', icon: 'rss' },
-          { name: 'Users', path: '/dashboard/administrator/users', icon: 'users' },
-          { name: 'Events', path: '/dashboard/administrator/events', icon: 'calendar' },
-          { name: 'Reports', path: '/dashboard/administrator/reports', icon: 'document-text' }
+          { name: 'Dashboard', path: '/dashboard/administrator', icon: Megaphone },
+          { name: 'Users', path: '/dashboard/administrator/users', icon: Users },
+          { name: 'Events', path: '/dashboard/administrator/events', icon: CalendarDays },
+          { name: 'Reports', path: '/dashboard/administrator/reports', icon: FileText }
         ]
       default:
         return []
@@ -88,65 +98,47 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-[#faf7ef]">
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-md">
-        <div className="p-4 border-b">
+      <div className="w-64 bg-[#2c3e50] text-white shadow-md flex flex-col">
+        <div className="p-4 mb-8 flex items-center justify-center">
           <Image 
             src="/gc-hub-logo.svg" 
             alt="GC Hub Logo" 
-            width={120} 
-            height={48} 
-            className="mx-auto"
+            width={100} 
+            height={40} 
+            className="mt-4"
           />
         </div>
         
-        <div className="p-4 border-b">
-          <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold">
-              {user?.name?.charAt(0) || 'U'}
-            </div>
-            <div className="ml-3">
-              <p className="font-medium">{user?.name || 'User'}</p>
-              <p className="text-xs text-gray-500 capitalize">{role}</p>
-            </div>
-          </div>
-        </div>
-        
-        <nav className="p-4">
+        <nav className="flex-1 px-4">
           <ul>
-            {getNavItems().map((item, index) => (
-              <li key={index} className="mb-2">
-                <Link 
-                  href={item.path}
-                  className={`flex items-center p-2 rounded-md ${
-                    pathname === item.path 
-                      ? 'bg-purple-100 text-purple-600' 
-                      : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="mr-3">
-                    {/* Icon would go here */}
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  </span>
-                  {item.name}
-                </Link>
-              </li>
-            ))}
+            {getNavItems().map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <li key={index} className="mb-2">
+                  <Link 
+                    href={item.path}
+                    className={`flex items-center p-3 rounded-lg transition-colors ${
+                      pathname === item.path 
+                        ? 'bg-gray-600 text-white' 
+                        : 'text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {Icon && <Icon className="h-5 w-5 mr-3" />}
+                    {item.name}
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
           
-          <div className="mt-8 pt-4 border-t">
+          <div className="mt-8 pt-4 border-t border-gray-600">
             <button 
               onClick={handleLogout}
-              className="flex items-center p-2 w-full text-left text-gray-600 hover:bg-gray-100 rounded-md"
+              className="flex items-center p-3 w-full text-left text-gray-300 hover:bg-gray-600 rounded-lg transition-colors"
             >
-              <span className="mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </span>
+              <ArrowRight className="h-5 w-5 mr-3 rotate-180" />
               Logout
             </button>
           </div>
@@ -154,22 +146,15 @@ export default function DashboardLayout({
       </div>
       
       {/* Main Content */}
-      <div className="flex-1 bg-[#faf7ef]">
-        <header className="bg-[#faf7ef] border-b border-gray-200 p-4 flex justify-between">
-          <div className="text-gray-600">
-            <span className="mr-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </span>
-            {currentDate}
-          </div>
-          <div className="text-gray-600">
-            {user?.email}
+      <div className="flex-1">
+        <header className="bg-white border-b border-gray-200 p-4 flex justify-end items-center shadow-sm h-20">
+          <div className="text-gray-600 flex items-center">
+            <CalendarDays className="h-5 w-5 mr-2" />
+            <span>{currentDate}</span>
           </div>
         </header>
         
-        <main className="p-6">
+        <main className="p-6 h-[calc(100vh-64px)] overflow-y-auto">
           {children}
         </main>
       </div>

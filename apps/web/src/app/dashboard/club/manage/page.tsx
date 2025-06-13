@@ -18,6 +18,13 @@ interface Event {
   clubId: string;
 }
 
+interface ClubProfile {
+  id: string;
+  name: string;
+  description: string;
+  leaderId: string;
+}
+
 export default function ManageEvents() {
   const { user, token } = useAuth();
   const router = useRouter();
@@ -26,7 +33,7 @@ export default function ManageEvents() {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [userClub, setUserClub] = useState<{ id: string; name: string } | null>(null);
+  const [userClub, setUserClub] = useState<ClubProfile | null>(null);
   const [formData, setFormData] = useState<Partial<Event>>({
     title: '',
     description: '',
@@ -39,26 +46,40 @@ export default function ManageEvents() {
   });
 
   useEffect(() => {
+    if (!user) {
+      router.push('/login');
+      return;
+    }
     fetchUserClub();
     fetchEvents();
-  }, []);
+  }, [user]);
 
   const fetchUserClub = async () => {
     try {
       const response = await fetch('http://localhost:3001/api/profile/club', {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-User-ID': user?.id || '',
-          'X-User-Role': user?.role || ''
+          'user-id': user?.id || ''
         }
       });
       
-      if (!response.ok) throw new Error('Failed to fetch club');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch club');
+      }
       
       const data = await response.json();
+      console.log('Fetched club data:', data);
+      
+      // Check if user is the club leader
+      if (data.leaderId !== user?.id) {
+        throw new Error('You must be a club leader to manage events');
+      }
+      
       setUserClub(data);
       setFormData(prev => ({ ...prev, clubId: data.id }));
     } catch (err) {
+      console.error('Error fetching club:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
@@ -68,8 +89,7 @@ export default function ManageEvents() {
       const response = await fetch('http://localhost:3001/api/events/my', {
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-User-ID': user?.id || '',
-          'X-User-Role': user?.role || ''
+          'user-id': user?.id || ''
         }
       });
       
@@ -90,7 +110,7 @@ export default function ManageEvents() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userClub) {
+    if (!userClub || userClub.leaderId !== user?.id) {
       setError('You must be a club leader to create events');
       return;
     }
@@ -103,26 +123,36 @@ export default function ManageEvents() {
         ? `http://localhost:3001/api/events/${selectedEvent.id}`
         : 'http://localhost:3001/api/events';
       
+      // Only send the necessary data for update/create
       const eventData = {
-        ...formData,
-        clubId: userClub.id
+        title: formData.title,
+        description: formData.description,
+        date: formData.date,
+        startTime: formData.startTime,
+        endTime: formData.endTime,
+        location: formData.location,
+        capacity: formData.capacity,
+        clubId: userClub.id // Always use the current club's ID
       };
 
       console.log('Submitting event data:', eventData);
+      console.log('User ID:', user?.id);
+      console.log('Club ID:', userClub.id);
+      console.log('Event ID:', selectedEvent?.id);
       
       const response = await fetch(url, {
         method: selectedEvent ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'X-User-ID': user?.id || '',
-          'X-User-Role': user?.role || ''
+          'user-id': user?.id || ''
         },
         body: JSON.stringify(eventData)
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Error response:', errorData);
         throw new Error(errorData.error || 'Failed to save event');
       }
       
@@ -152,7 +182,7 @@ export default function ManageEvents() {
 
   const handleDelete = async (eventId: string) => {
     if (!confirm('Are you sure you want to delete this event?')) return;
-    if (!userClub) {
+    if (!userClub || userClub.leaderId !== user?.id) {
       setError('You must be a club leader to delete events');
       return;
     }
@@ -162,8 +192,7 @@ export default function ManageEvents() {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'X-User-ID': user?.id || '',
-          'X-User-Role': user?.role || ''
+          'user-id': user?.id || ''
         }
       });
 
@@ -180,12 +209,32 @@ export default function ManageEvents() {
   };
 
   const handleEdit = (event: Event) => {
-    if (!userClub || event.clubId !== userClub.id) {
+    if (!userClub || userClub.leaderId !== user?.id) {
+      setError('You must be a club leader to edit events');
+      return;
+    }
+
+    // Verify the event belongs to the user's club
+    if (event.clubId !== userClub.id) {
       setError('You can only edit events for your club');
       return;
     }
+
+    console.log('Editing event:', event);
+    console.log('User club:', userClub);
+    console.log('User ID:', user?.id);
+
     setSelectedEvent(event);
-    setFormData(event);
+    setFormData({
+      title: event.title,
+      description: event.description,
+      date: event.date,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      location: event.location,
+      capacity: event.capacity,
+      clubId: userClub.id // Always use the current club's ID
+    });
     setIsModalOpen(true);
   };
 
@@ -193,10 +242,24 @@ export default function ManageEvents() {
     router.push(`/dashboard/club/manage/participants/${eventId}`);
   };
 
+  if (!userClub || userClub.leaderId !== user?.id) {
+    return (
+      <div className="text-white">
+        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
+        <p>You must be a club leader to manage events.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Manage Events</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-white">Manage Events</h1>
+          {userClub && (
+            <p className="text-white/80">Club: {userClub.name}</p>
+          )}
+        </div>
         <button
           onClick={() => {
             setSelectedEvent(null);
@@ -212,7 +275,7 @@ export default function ManageEvents() {
             });
             setIsModalOpen(true);
           }}
-          className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700"
+          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
         >
           Create New Event
         </button>
@@ -248,22 +311,22 @@ export default function ManageEvents() {
               <p className="text-sm text-white/70 mb-4">
                 Capacity: {event.registrations || 0}/{event.capacity}
               </p>
-              <div className="flex space-x-2">
+              <div className="flex space-x-4">
                 <button
                   onClick={() => handleEdit(event)}
-                  className="text-purple-300 hover:text-purple-100"
+                  className="px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(event.id)}
-                  className="text-red-300 hover:text-red-100"
+                  className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700"
                 >
                   Delete
                 </button>
                 <button
                   onClick={() => handleViewParticipants(event.id)}
-                  className="text-blue-300 hover:text-blue-100"
+                  className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
                 >
                   View Participants
                 </button>

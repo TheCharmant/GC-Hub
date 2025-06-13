@@ -18,9 +18,17 @@ interface EventStats {
   attendanceRate: number;
 }
 
+interface Event {
+  id: string;
+  title: string;
+  date: string;
+}
+
 export default function ClubStats() {
   const { user, token } = useAuth();
   const [clubStats, setClubStats] = useState<ClubStats | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<string>('');
   const [selectedEventStats, setSelectedEventStats] = useState<EventStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +36,7 @@ export default function ClubStats() {
   useEffect(() => {
     if (user?.id) {
       fetchClubStats();
+      fetchEvents();
     }
   }, [user?.id]);
 
@@ -51,6 +60,24 @@ export default function ClubStats() {
     }
   };
 
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/events/my', {
+        headers: {
+          'user-id': user?.id || '',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch events');
+      
+      const data = await response.json();
+      setEvents(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  };
+
   const fetchEventStats = async (eventId: string) => {
     try {
       const response = await fetch(`http://localhost:3001/api/stats/event/${eventId}`, {
@@ -66,6 +93,15 @@ export default function ClubStats() {
       setSelectedEventStats(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
+    }
+  };
+
+  const handleEventChange = (eventId: string) => {
+    setSelectedEvent(eventId);
+    if (eventId) {
+      fetchEventStats(eventId);
+    } else {
+      setSelectedEventStats(null);
     }
   };
 
@@ -105,11 +141,27 @@ export default function ClubStats() {
         </div>
       )}
 
-      {/* Event Details */}
-      {selectedEventStats && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold text-white mb-4">Event Statistics</h2>
-          
+      {/* Event Selection */}
+      <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg shadow-md text-white">
+        <h2 className="text-2xl font-bold mb-4">Event Statistics</h2>
+        <div className="mb-6">
+          <label className="block text-white mb-2">Select Event</label>
+          <select
+            value={selectedEvent}
+            onChange={(e) => handleEventChange(e.target.value)}
+            className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
+          >
+            <option value="">Select an event</option>
+            {events.map((event) => (
+              <option key={event.id} value={event.id}>
+                {event.title} ({new Date(event.date).toLocaleDateString()})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Event Details */}
+        {selectedEventStats && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg shadow-md text-white">
               <h3 className="text-lg font-semibold mb-4">Registration Overview</h3>
@@ -133,8 +185,8 @@ export default function ClubStats() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

@@ -21,7 +21,7 @@ interface Event {
   club: {
     id: string;
     name: string;
-  };
+  } | null;
 }
 
 export default function EventsPage() {
@@ -133,7 +133,7 @@ export default function EventsPage() {
                 <p>Date: {new Date(event.date).toLocaleDateString()}</p>
                 <p>Time: {event.startTime} - {event.endTime}</p>
                 <p>Location: {event.location}</p>
-                <p>Club: {event.club?.name || 'No club assigned'}</p>
+                <p>Club: {event.club ? event.club.name : 'No Club Assigned'}</p>
               </div>
               <div className="flex items-center justify-between">
                 <Badge variant={event.approved ? "success" : "warning"}>
