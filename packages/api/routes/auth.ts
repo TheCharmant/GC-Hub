@@ -74,6 +74,7 @@ router.post('/signup', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    const expectedRole = req.headers['x-user-role'] as string;
 
     // Validate input
     if (!email || !password) {
@@ -93,6 +94,11 @@ router.post('/login', async (req, res) => {
     const passwordMatch = await bcrypt.compare(password, user.passwordHash);
     if (!passwordMatch) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Verify role if expected role is provided
+    if (expectedRole && user.role.toLowerCase() !== expectedRole.toLowerCase()) {
+      return res.status(403).json({ error: `Invalid role. Expected ${expectedRole} but got ${user.role}` });
     }
 
     // Generate JWT token

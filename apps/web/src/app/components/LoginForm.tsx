@@ -32,10 +32,12 @@ export default function LoginForm({ role, fieldLabel = 'Email', redirectPath }: 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-User-Role': role
         },
         body: JSON.stringify({
           email,
           password,
+          role
         }),
       })
       
@@ -43,6 +45,11 @@ export default function LoginForm({ role, fieldLabel = 'Email', redirectPath }: 
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to log in')
+      }
+
+      // Verify the user's role matches the expected role
+      if (data.user.role.toLowerCase() !== role.toLowerCase()) {
+        throw new Error(`Invalid role. Expected ${role} but got ${data.user.role}`)
       }
       
       // Use AuthContext login function
@@ -52,7 +59,13 @@ export default function LoginForm({ role, fieldLabel = 'Email', redirectPath }: 
       if (redirectPath) {
         router.push(redirectPath)
       } else {
-        router.push(`/dashboard/${data.user.role.toLowerCase()}`)
+        // Map role to correct dashboard path
+        const roleToPath: { [key: string]: string } = {
+          'admin': '/dashboard/administrator',
+          'student': '/dashboard/student',
+          'club': '/dashboard/club'
+        }
+        router.push(roleToPath[data.user.role.toLowerCase()] || '/dashboard')
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An error occurred during login')

@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { Calendar, Users, MapPin, Clock, Plus, Edit2, Trash2, UserCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Event {
   id: string;
@@ -51,7 +55,6 @@ export default function ManageEvents() {
       return;
     }
     fetchUserClub();
-    fetchEvents();
   }, [user]);
 
   const fetchUserClub = async () => {
@@ -69,18 +72,19 @@ export default function ManageEvents() {
       }
       
       const data = await response.json();
-      console.log('Fetched club data:', data);
-      
-      // Check if user is the club leader
-      if (data.leaderId !== user?.id) {
-        throw new Error('You must be a club leader to manage events');
-      }
-      
       setUserClub(data);
       setFormData(prev => ({ ...prev, clubId: data.id }));
+      
+      // Only fetch events if we have the club data
+      if (data.leaderId === user?.id) {
+        fetchEvents();
+      } else {
+        setLoading(false);
+      }
     } catch (err) {
       console.error('Error fetching club:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
+      setLoading(false);
     }
   };
 
@@ -242,25 +246,48 @@ export default function ManageEvents() {
     router.push(`/dashboard/club/manage/participants/${eventId}`);
   };
 
-  if (!userClub || userClub.leaderId !== user?.id) {
+  if (loading) {
+    return <div className="text-center text-gray-700">Loading...</div>;
+  }
+
+  if (error) {
+    return <p className="text-red-500 mb-4">Error: {error}</p>;
+  }
+
+  if (!userClub) {
     return (
-      <div className="text-white">
-        <h1 className="text-3xl font-bold mb-4">Access Denied</h1>
-        <p>You must be a club leader to manage events.</p>
+      <div className="max-w-7xl mx-auto py-6">
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">No Club Found</h1>
+          <p className="text-gray-600">You need to be part of a club to manage events.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (userClub.leaderId !== user?.id) {
+    return (
+      <div className="max-w-7xl mx-auto py-6">
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">Access Denied</h1>
+          <p className="text-gray-600">You must be a club leader to manage events.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Manage Events</h1>
-          {userClub && (
-            <p className="text-white/80">Club: {userClub.name}</p>
-          )}
-        </div>
-        <button
+    <div className="max-w-7xl mx-auto py-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 flex items-center mb-2">
+          <Calendar className="h-8 w-8 mr-2 text-gray-700" /> Manage Events
+        </h1>
+        <p className="text-gray-600">Create and manage your club's events</p>
+      </div>
+
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Manage Events</h1>
+        <Button
           onClick={() => {
             setSelectedEvent(null);
             setFormData({
@@ -271,177 +298,171 @@ export default function ManageEvents() {
               endTime: '',
               location: '',
               capacity: 0,
-              clubId: userClub?.id || ''
+              clubId: userClub.id
             });
             setIsModalOpen(true);
           }}
-          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+          className="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
         >
-          Create New Event
-        </button>
+          <Plus className="w-4 h-4 mr-2" />
+          Create Event
+        </Button>
       </div>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="text-white">Loading events...</div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => (
-            <div key={event.id} className="bg-white/10 backdrop-blur-sm p-6 rounded-lg shadow-md text-white">
-              <div className="flex justify-between items-start mb-2">
-                <h2 className="text-xl font-semibold">{event.title}</h2>
-                <span className={`px-2 py-1 rounded text-sm ${
-                  event.approved 
-                    ? 'bg-green-500/20 text-green-300' 
-                    : 'bg-yellow-500/20 text-yellow-300'
-                }`}>
-                  {event.approved ? 'Approved' : 'Pending'}
-                </span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {events.map((event) => (
+          <div key={event.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-2">{event.title}</h2>
+              <p className="text-gray-600 mb-4 line-clamp-2">{event.description}</p>
+              
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center text-gray-600">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  <span>{new Date(event.date).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <Clock className="w-4 h-4 mr-2" />
+                  <span>{event.startTime} - {event.endTime}</span>
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <MapPin className="w-4 h-4 mr-2" />
+                  <span>{event.location}</span>
+                </div>
+                <div className="flex items-center text-gray-600">
+                  <Users className="w-4 h-4 mr-2" />
+                  <span>{typeof event.registrations === 'number' ? event.registrations : 0} / {event.capacity} participants</span>
+                </div>
               </div>
-              <p className="text-white/80 mb-2">
-                {new Date(event.date).toLocaleDateString()} • {event.startTime}-{event.endTime}
-              </p>
-              <p className="text-white/90 mb-4">{event.description}</p>
-              <p className="text-sm text-white/70">Location: {event.location}</p>
-              <p className="text-sm text-white/70 mb-4">
-                Capacity: {event.registrations || 0}/{event.capacity}
-              </p>
-              <div className="flex space-x-4">
-                <button
-                  onClick={() => handleEdit(event)}
-                  className="px-3 py-1 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  onClick={() => {
+                    setSelectedEvent(event);
+                    setFormData(event);
+                    setIsModalOpen(true);
+                  }}
+                  className="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
                 >
+                  <Edit2 className="w-4 h-4 mr-2" />
                   Edit
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleDelete(event.id)}
-                  className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="bg-white text-red-600 hover:bg-red-50 border border-red-200"
                 >
+                  <Trash2 className="w-4 h-4 mr-2" />
                   Delete
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => handleViewParticipants(event.id)}
-                  className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  className="bg-white text-gray-700 hover:bg-gray-50 border border-blue-200"
                 >
+                  <UserCheck className="w-4 h-4 mr-2" />
                   View Participants
-                </button>
+                </Button>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+          </div>
+        ))}
+      </div>
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-gray-900 rounded-lg p-6 w-full max-w-2xl">
-            <h2 className="text-2xl font-bold text-white mb-4">
-              {selectedEvent ? 'Edit Event' : 'Create New Event'}
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6">
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">
+              {selectedEvent ? 'Edit Event' : 'Create Event'}
             </h2>
-            {userClub && (
-              <p className="text-purple-300 mb-4">
-                Creating event for: <span className="font-semibold">{userClub.name}</span>
-              </p>
-            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-white mb-2">Title</label>
-                <input
+                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                <Input
                   type="text"
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
                   required
+                  className="w-full"
                 />
               </div>
               <div>
-                <label className="block text-white mb-2">Description</label>
-                <textarea
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <Textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
-                  rows={3}
                   required
+                  className="w-full"
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-white mb-2">Date</label>
-                  <input
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                  <Input
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
                     required
+                    className="w-full"
                   />
                 </div>
                 <div>
-                  <label className="block text-white mb-2">Location</label>
-                  <input
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <Input
                     type="text"
                     value={formData.location}
                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
                     required
+                    className="w-full"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-white mb-2">Start Time</label>
-                  <input
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                  <Input
                     type="time"
                     value={formData.startTime}
                     onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
                     required
+                    className="w-full"
                   />
                 </div>
                 <div>
-                  <label className="block text-white mb-2">End Time</label>
-                  <input
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                  <Input
                     type="time"
                     value={formData.endTime}
                     onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
                     required
+                    className="w-full"
                   />
                 </div>
                 <div>
-                  <label className="block text-white mb-2">Capacity</label>
-                  <input
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
+                  <Input
                     type="number"
                     value={formData.capacity}
                     onChange={(e) => setFormData({ ...formData, capacity: parseInt(e.target.value) })}
-                    className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
-                    min="1"
                     required
+                    min="1"
+                    className="w-full"
                   />
                 </div>
               </div>
-              <div className="flex justify-end space-x-4 mt-6">
-                <button
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
                   type="button"
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setSelectedEvent(null);
-                  }}
-                  className="px-4 py-2 text-white hover:text-gray-300"
+                  onClick={() => setIsModalOpen(false)}
+                  className="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  disabled={loading}
-                  className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 disabled:bg-purple-800"
+                  className="bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
                 >
-                  {loading ? 'Saving...' : selectedEvent ? 'Update Event' : 'Create Event'}
-                </button>
+                  {selectedEvent ? 'Update Event' : 'Create Event'}
+                </Button>
               </div>
             </form>
           </div>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { BarChart2, Users, Clock, Calendar } from 'lucide-react';
 
 interface ClubStats {
   clubId: string;
@@ -106,50 +107,60 @@ export default function ClubStats() {
   };
 
   if (loading) {
-    return <div className="text-white">Loading statistics...</div>;
+    return <div className="text-center text-gray-700">Loading statistics...</div>;
   }
 
   if (error) {
-    return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-        {error}
-      </div>
-    );
+    return <p className="text-red-500 mb-4">Error: {error}</p>;
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-white">Club Statistics</h1>
+    <div className="max-w-7xl mx-auto py-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 flex items-center mb-2">
+          <BarChart2 className="h-8 w-8 mr-2 text-gray-700" /> Club Statistics
+        </h1>
+        <p className="text-gray-600">View your club's performance metrics and event statistics</p>
+      </div>
 
       {/* Club Overview */}
       {clubStats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg shadow-md text-white">
-            <h3 className="text-lg font-semibold mb-2">Total Events</h3>
-            <p className="text-3xl font-bold">{clubStats.totalEvents}</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center mb-4">
+              <Calendar className="h-6 w-6 text-gray-700 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-800">Total Events</h3>
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{clubStats.totalEvents}</p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg shadow-md text-white">
-            <h3 className="text-lg font-semibold mb-2">Total Attendees</h3>
-            <p className="text-3xl font-bold">{clubStats.totalAttendees}</p>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center mb-4">
+              <Users className="h-6 w-6 text-gray-700 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-800">Total Attendees</h3>
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{clubStats.totalAttendees}</p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg shadow-md text-white">
-            <h3 className="text-lg font-semibold mb-2">Total Hours</h3>
-            <p className="text-3xl font-bold">{clubStats.totalHours}</p>
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <div className="flex items-center mb-4">
+              <Clock className="h-6 w-6 text-gray-700 mr-2" />
+              <h3 className="text-lg font-semibold text-gray-800">Total Hours</h3>
+            </div>
+            <p className="text-3xl font-bold text-gray-900">{clubStats.totalHours}</p>
           </div>
         </div>
       )}
 
       {/* Event Selection */}
-      <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg shadow-md text-white">
-        <h2 className="text-2xl font-bold mb-4">Event Statistics</h2>
+      <div className="bg-white p-6 rounded-lg shadow-md">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Event Statistics</h2>
         <div className="mb-6">
-          <label className="block text-white mb-2">Select Event</label>
+          <label className="block text-gray-700 mb-2">Select Event</label>
           <select
             value={selectedEvent}
             onChange={(e) => handleEventChange(e.target.value)}
-            className="w-full p-2 rounded bg-gray-800 text-white border border-gray-700"
+            className="w-full p-2 rounded border border-gray-300 bg-white text-gray-700 focus:outline-none focus:border-blue-500"
           >
             <option value="">Select an event</option>
             {events.map((event) => (
@@ -163,24 +174,24 @@ export default function ClubStats() {
         {/* Event Details */}
         {selectedEventStats && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white/10 backdrop-blur-sm p-6 rounded-lg shadow-md text-white">
-              <h3 className="text-lg font-semibold mb-4">Registration Overview</h3>
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Registration Overview</h3>
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-white/70">Total Registered</p>
-                  <p className="text-2xl font-bold">{selectedEventStats.totalRegistered}</p>
+                  <p className="text-sm text-gray-500">Total Registered</p>
+                  <p className="text-2xl font-bold text-gray-900">{selectedEventStats.totalRegistered}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-white/70">Total Attended</p>
-                  <p className="text-2xl font-bold">{selectedEventStats.totalAttended}</p>
+                  <p className="text-sm text-gray-500">Total Attended</p>
+                  <p className="text-2xl font-bold text-gray-900">{selectedEventStats.totalAttended}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-white/70">Attendance Rate</p>
-                  <p className="text-2xl font-bold">{selectedEventStats.attendanceRate}%</p>
+                  <p className="text-sm text-gray-500">Attendance Rate</p>
+                  <p className="text-2xl font-bold text-gray-900">{selectedEventStats.attendanceRate}%</p>
                 </div>
                 <div>
-                  <p className="text-sm text-white/70">Total Hours</p>
-                  <p className="text-2xl font-bold">{selectedEventStats.totalHours}</p>
+                  <p className="text-sm text-gray-500">Total Hours</p>
+                  <p className="text-2xl font-bold text-gray-900">{selectedEventStats.totalHours}</p>
                 </div>
               </div>
             </div>
