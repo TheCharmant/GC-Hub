@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { isAuthenticated, getCurrentUser, logout } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   Megaphone,
   CalendarDays,
@@ -23,26 +23,10 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
-  const [role, setRole] = useState<string>('')
+  const { user, logout: authLogout } = useAuth()
   const [currentDate, setCurrentDate] = useState<string>('')
-  const [user, setUser] = useState<any>(null)
   
   useEffect(() => {
-    // Check if user is authenticated
-    if (!isAuthenticated()) {
-      router.push('/')
-      return
-    }
-    
-    // Get user data
-    const userData = getCurrentUser()
-    if (userData) {
-      setUser(userData)
-      setRole(userData.role.toLowerCase())
-    } else {
-      router.push('/')
-    }
-    
     // Set current date
     const date = new Date()
     setCurrentDate(date.toLocaleDateString('en-US', { 
@@ -50,52 +34,71 @@ export default function DashboardLayout({
       day: 'numeric', 
       year: 'numeric' 
     }))
-  }, [router])
+  }, [])
+
+  useEffect(() => {
+    console.log('Current user:', user)
+    console.log('User role:', user?.role)
+  }, [user])
   
   const getNavItems = () => {
-    switch (role) {
-      case 'student':
-        return [
-          { name: 'Feed', path: '/dashboard/student/feed', icon: Megaphone },
-          { name: 'Events', path: '/dashboard/student/events', icon: CalendarDays },
-          { name: 'Stats', path: '/dashboard/student/stats', icon: BarChart },
-          { name: 'Profile', path: '/dashboard/student/profile', icon: User2 }
-        ]
-      case 'club':
-        return [
-          { name: 'Feed', path: '/dashboard/club/feed', icon: Megaphone },
-          { name: 'Manage', path: '/dashboard/club/manage', icon: Settings },
-          { name: 'Stats', path: '/dashboard/club/stats', icon: BarChart },
-          { name: 'Profile', path: '/dashboard/club/profile', icon: User2 }
-        ]
-      case 'organizer':
-        return [
-          { name: 'Feed', path: '/dashboard/organizer/feed', icon: Megaphone },
-          { name: 'Manage', path: '/dashboard/organizer/manage', icon: Settings },
-          { name: 'Reports', path: '/dashboard/organizer/reports', icon: FileText },
-          { name: 'Profile', path: '/dashboard/organizer/profile', icon: User2 }
-        ]
-      case 'administrator':
-        return [
-          { name: 'Dashboard', path: '/dashboard/administrator', icon: Megaphone },
-          { name: 'Users', path: '/dashboard/administrator/users', icon: Users },
-          { name: 'Events', path: '/dashboard/administrator/events', icon: CalendarDays },
-          { name: 'Reports', path: '/dashboard/administrator/reports', icon: FileText }
-        ]
-      default:
-        return []
+    if (!user) {
+      console.log('No user found')
+      return []
     }
+    
+    console.log('Getting nav items for role:', user.role.toLowerCase())
+    const items = (() => {
+      switch (user.role.toLowerCase()) {
+        case 'student':
+          return [
+            { name: 'Feed', path: '/dashboard/student/feed', icon: Megaphone },
+            { name: 'Events', path: '/dashboard/student/events', icon: CalendarDays },
+            { name: 'Stats', path: '/dashboard/student/stats', icon: BarChart },
+            { name: 'Profile', path: '/dashboard/student/profile', icon: User2 }
+          ]
+        case 'club':
+          return [
+            { name: 'Feed', path: '/dashboard/club/feed', icon: Megaphone },
+            { name: 'Manage', path: '/dashboard/club/manage', icon: Settings },
+            { name: 'Stats', path: '/dashboard/club/stats', icon: BarChart },
+            { name: 'Profile', path: '/dashboard/club/profile', icon: User2 }
+          ]
+        case 'organizer':
+          return [
+            { name: 'Feed', path: '/dashboard/organizer/feed', icon: Megaphone },
+            { name: 'Manage', path: '/dashboard/organizer/manage', icon: Settings },
+            { name: 'Reports', path: '/dashboard/organizer/reports', icon: FileText },
+            { name: 'Profile', path: '/dashboard/organizer/profile', icon: User2 }
+          ]
+        case 'admin':
+          return [
+            { name: 'Dashboard', path: '/dashboard/administrator', icon: Megaphone },
+            { name: 'Users', path: '/dashboard/administrator/users', icon: Users },
+            { name: 'Clubs', path: '/dashboard/administrator/clubs', icon: Users },
+            { name: 'Events', path: '/dashboard/administrator/events', icon: CalendarDays },
+            { name: 'Reports', path: '/dashboard/administrator/reports', icon: FileText }
+          ]
+        default:
+          console.log('No matching role found')
+          return []
+      }
+    })()
+    console.log('Navigation items:', items)
+    return items
   }
   
   const handleLogout = () => {
-    logout()
-    router.push('/')
+    authLogout()
   }
   
   // If no user data yet, show loading
   if (!user) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>
   }
+
+  const navItems = getNavItems()
+  console.log('Final nav items:', navItems)
 
   return (
     <div className="flex min-h-screen bg-[#faf7ef]">
@@ -113,7 +116,7 @@ export default function DashboardLayout({
         
         <nav className="flex-1 px-4">
           <ul>
-            {getNavItems().map((item, index) => {
+            {navItems.map((item, index) => {
               const Icon = item.icon;
               return (
                 <li key={index} className="mb-2">

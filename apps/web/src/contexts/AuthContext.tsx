@@ -55,12 +55,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    const currentRole = user?.role;
     setUser(null);
     setToken(null);
     localStorage.removeItem('userData');
     localStorage.removeItem('authToken');
     sessionStorage.removeItem('authToken');
-    router.push('/login/club');
+    
+    // Redirect based on role
+    switch (currentRole?.toLowerCase()) {
+      case 'administrator':
+        router.push('/login/administrator');
+        break;
+      case 'organizer':
+        router.push('/login/organizer');
+        break;
+      case 'club':
+        router.push('/login/club');
+        break;
+      default:
+        router.push('/login/club'); // Default fallback
+    }
   };
 
   return (

@@ -44,49 +44,58 @@ export default function AdminDashboard() {
     }
   }, [token]);
 
-  if (loading) return <div className="text-white">Loading dashboard...</div>;
-  if (error) return <div className="text-red-500">{error}</div>;
+  if (loading) {
+    return <div className="text-center text-gray-700">Loading dashboard...</div>;
+  }
+  if (error) {
+    return <p className="text-red-500 mb-4">Error: {error}</p>;
+  }
   if (!stats) return null;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-white">Administrator Dashboard</h1>
+    <div className="max-w-7xl mx-auto py-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 flex items-center mb-2">
+          <Building2 className="h-8 w-8 mr-2 text-gray-700" /> Administrator Dashboard
+        </h1>
+        <p className="text-gray-600">Welcome to your administrator dashboard!</p>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="bg-white p-6 rounded-lg shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xl font-semibold text-gray-800 mb-2">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalUsers}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white p-6 rounded-lg shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Clubs</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xl font-semibold text-gray-800 mb-2">Total Clubs</CardTitle>
+            <Users className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalClubs}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white p-6 rounded-lg shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Events</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xl font-semibold text-gray-800 mb-2">Total Events</CardTitle>
+            <Calendar className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalEvents}</div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white p-6 rounded-lg shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Events</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xl font-semibold text-gray-800 mb-2">Pending Events</CardTitle>
+            <BarChart3 className="h-4 w-4 text-gray-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.pendingEvents}</div>
@@ -95,58 +104,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Link href="/dashboard/administrator/users">
-          <Card className="hover:bg-accent cursor-pointer">
-            <CardHeader>
-              <CardTitle>Manage Users</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                View and manage user accounts, roles, and permissions
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/dashboard/administrator/events">
-          <Card className="hover:bg-accent cursor-pointer">
-            <CardHeader>
-              <CardTitle>Manage Events</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Review and approve events, manage event details
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/dashboard/administrator/clubs">
-          <Card className="hover:bg-accent cursor-pointer">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle>Manage Clubs</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                View and manage clubs, members, and club events
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/dashboard/administrator/reports">
-          <Card className="hover:bg-accent cursor-pointer">
-            <CardHeader>
-              <CardTitle>Reports</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Generate and view reports on system activity
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
+        {/* All action cards removed for a minimal dashboard */}
       </div>
     </div>
   );

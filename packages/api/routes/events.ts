@@ -42,8 +42,8 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/events/my — Get events created by the authenticated user (Club Leader)
-router.get('/my', authenticate, authorize(['club']), async (req, res) => {
+// GET /api/events/my — Get events created by the authenticated user (Club Leader / Organizer)
+router.get('/my', authenticate, authorize(['club', 'organizer']), async (req, res) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -126,12 +126,11 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST /api/events — Create event (Club Leader / Organizer)
-router.post('/', authenticate, authorize(['club']), async (req, res) => {
+router.post('/', authenticate, authorize(['club', 'organizer']), async (req, res) => {
   try {
     const { title, description, date, startTime, endTime, location, clubId } = req.body;
-    
-    // Get user ID from authenticated request
     const createdById = req.user?.userId;
+    const userRole = req.user?.role;
     
     if (!createdById) {
       return res.status(401).json({ error: 'Unauthorized' });
@@ -145,25 +144,26 @@ router.post('/', authenticate, authorize(['club']), async (req, res) => {
       endTime, 
       location, 
       clubId, 
-      createdById 
+      createdById,
+      userRole
     });
     
-    // First, verify the club exists and user is the leader
-    const club = await prisma.club.findFirst({
-      where: {
-        id: clubId,
-        leaderId: createdById
+    // For club leaders, verify they belong to the club
+    if (userRole === 'club' && clubId) {
+      const club = await prisma.club.findFirst({
+        where: {
+          id: clubId,
+          leaderId: createdById
+        }
+      });
+      
+      if (!club) {
+        console.error('Club not found or user is not the leader:', { clubId, createdById });
+        return res.status(403).json({ error: 'You are not authorized to create events for this club' });
       }
-    });
-    
-    if (!club) {
-      console.error('Club not found or user is not the leader:', { clubId, createdById });
-      return res.status(403).json({ error: 'You are not authorized to create events for this club' });
     }
 
-    console.log('Found club:', club);
-    
-    // Create the event with the verified club
+    // Create the event
     const event = await prisma.event.create({
       data: {
         title,
@@ -173,8 +173,8 @@ router.post('/', authenticate, authorize(['club']), async (req, res) => {
         endTime,
         location,
         createdById,
-        clubId: club.id,
-        approved: false // Events start as unapproved
+        clubId: userRole === 'club' ? clubId : null, // Only set clubId for club leaders
+        approved: userRole === 'organizer' // Auto-approve organizer events
       },
       include: {
         createdBy: {

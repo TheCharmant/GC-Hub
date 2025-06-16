@@ -6,9 +6,19 @@ import { ReportType } from '@prisma/client';
 const router = Router();
 
 // GET /api/reports - Get all reports
-router.get('/', authenticate, authorize(['admin']), async (req, res) => {
+router.get('/', authenticate, authorize(['admin', 'organizer']), async (req, res) => {
   try {
+    const userId = req.user?.userId;
+    const userRole = req.user?.role;
+
+    let whereClause = {};
+
+    if (userRole === 'organizer' && userId) {
+      whereClause = { userId: userId };
+    }
+
     const reports = await prisma.report.findMany({
+      where: whereClause,
       include: {
         generatedBy: {
           select: {
@@ -31,7 +41,7 @@ router.get('/', authenticate, authorize(['admin']), async (req, res) => {
 });
 
 // POST /api/reports/generate - Generate a new report
-router.post('/generate', authenticate, authorize(['admin']), async (req, res) => {
+router.post('/generate', authenticate, authorize(['admin', 'organizer']), async (req, res) => {
   try {
     const { type, filters } = req.body;
     const userId = req.user?.userId;
@@ -49,13 +59,13 @@ router.post('/generate', authenticate, authorize(['admin']), async (req, res) =>
     let reportData;
     switch (type) {
       case 'event_summary':
-        reportData = await generateEventSummaryReport(filters);
+        reportData = await generateEventSummaryReport(filters, userId);
         break;
       case 'attendance':
-        reportData = await generateAttendanceReport(filters);
+        reportData = await generateAttendanceReport(filters, userId);
         break;
       case 'hours':
-        reportData = await generateHoursReport(filters);
+        reportData = await generateHoursReport(filters, userId);
         break;
       default:
         return res.status(400).json({ error: 'Unsupported report type' });
@@ -88,23 +98,26 @@ router.post('/generate', authenticate, authorize(['admin']), async (req, res) =>
 });
 
 // Helper functions for report generation
-async function generateEventSummaryReport(filters: any) {
-  // Implement event summary report generation
-  // This would typically involve querying the database and formatting the data
+async function generateEventSummaryReport(filters: any, userId: string) {
+  // Implement event summary report generation for a specific organizer
+  // This would typically involve querying the database for events managed by userId
+  // and then generating the report based on those events.
   return {
     fileUrl: '/reports/event-summary.pdf' // Placeholder
   };
 }
 
-async function generateAttendanceReport(filters: any) {
-  // Implement attendance report generation
+async function generateAttendanceReport(filters: any, userId: string) {
+  // Implement attendance report generation for a specific organizer
+  // Query attendance records for events managed by userId.
   return {
     fileUrl: '/reports/attendance.pdf' // Placeholder
   };
 }
 
-async function generateHoursReport(filters: any) {
-  // Implement hours report generation
+async function generateHoursReport(filters: any, userId: string) {
+  // Implement hours report generation for a specific organizer
+  // Query hours records for events managed by userId.
   return {
     fileUrl: '/reports/hours.pdf' // Placeholder
   };

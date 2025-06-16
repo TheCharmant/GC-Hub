@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Users, Calendar, Building2, MoreVertical } from 'lucide-react';
+import { Search, Users, Calendar, Building2, MoreVertical, Plus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import Image from 'next/image';
 
 interface Club {
   id: string;
@@ -99,7 +100,8 @@ export default function ClubsPage() {
         },
         body: JSON.stringify({
           ...clubData,
-          leaderId: selectedClubLeader?.id
+          leaderId: selectedClubLeader?.id,
+          status: 'active', // Explicitly setting status as 'active'
         })
       });
       if (!response.ok) {
@@ -169,152 +171,199 @@ export default function ClubsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Clubs</h1>
-        <Button onClick={() => setShowCreateModal(true)}>Create Club</Button>
+    <div className="max-w-7xl mx-auto py-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 flex items-center mb-2">
+          <Building2 className="h-8 w-8 mr-2 text-gray-700" /> Clubs
+        </h1>
+        <p className="text-gray-600">Manage and view clubs in the system.</p>
       </div>
 
-      <div className="flex gap-4">
-        <Input
-          placeholder="Search clubs..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'active' | 'inactive')}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="mt-4 flex justify-between items-center mb-6">
+        <div onClick={() => setShowCreateModal(true)} className="flex items-center text-gray-700 hover:text-gray-900 transition-colors cursor-pointer">
+          <Plus className="h-5 w-5 mr-1" />
+          <span className="text-sm font-medium">New Club</span>
+        </div>
+        <div className="relative flex items-center">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Input
+            placeholder="Search clubs..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-4 pr-10 py-2 border border-gray-300 rounded-md w-full max-w-xs bg-white focus:outline-none focus:border-blue-500 placeholder-gray-400"
+          />
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as 'all' | 'active' | 'inactive')}>
+            <SelectTrigger className="ml-4 w-[180px] bg-white border border-gray-300 text-gray-800 focus:outline-none focus:border-blue-500">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {loading ? (
-        <div className="text-white">Loading clubs...</div>
+        <div className="text-center text-gray-700">Loading clubs...</div>
       ) : error ? (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredClubs.map((club) => (
-            <Card key={club.id} className="bg-white/10 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white">{club.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-white/70">{club.description}</p>
-                <div className="mt-4 flex justify-between items-center">
-                  <div className="text-sm text-white/50">
-                    <p>Members: {club.memberCount}</p>
-                    <p>Events: {club.eventCount}</p>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredClubs.length > 0 ? (
+            filteredClubs.map((club) => (
+              <div key={club.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                <div className="relative w-full h-48 bg-gray-200 flex items-center justify-center">
+                  <Image 
+                    src="/placeholder-club.png" 
+                    alt={club.name}
+                    layout="fill"
+                    objectFit="cover"
+                    className="rounded-t-lg"
+                  />
+                </div>
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-2">
+                    <h2 className="text-xl font-bold text-gray-800">{club.name}</h2>
+                    <Badge className={`px-2 py-1 rounded text-sm ${
+                      club.status === 'active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {club.status}
+                    </Badge>
                   </div>
-                  <Badge variant={club.status === 'active' ? "success" : "warning"}>
-                    {club.status}
-                  </Badge>
+                  <p className="text-gray-700 mb-4 line-clamp-3">{club.description}</p>
+                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+                    <div className="flex items-center">
+                      <Users className="h-4 w-4 mr-1.5 text-gray-400" />
+                      <span>{club.memberCount} Members</span>
+                    </div>
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-1.5 text-gray-400" />
+                      <span>{club.eventCount} Events</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-2 border-t border-gray-100">
+                    <Button
+                      onClick={() => router.push(`/dashboard/administrator/clubs/${club.id}`)}
+                      className="text-sm text-gray-900 bg-transparent hover:bg-gray-100 transition-colors"
+                    >
+                      View Details
+                    </Button>
+                  </div>
                 </div>
-                <div className="mt-4 flex justify-end gap-2">
-                  <Button
-                    onClick={() => router.push(`/dashboard/administrator/clubs/${club.id}`)}
-                    variant="outline"
-                    className="text-white border-white/20 hover:bg-white/10"
-                  >
-                    View Details
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="text-white hover:bg-white/10">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => handleUpdateClub(club.id, { status: club.status === 'active' ? 'inactive' : 'active' })}>
-                        {club.status === 'active' ? 'Deactivate' : 'Activate'}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDeleteClub(club.id)}>
-                        Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-gray-700">No clubs found.</div>
+          )}
         </div>
       )}
 
+      {/* Create Club Modal */}
       {showCreateModal && (
-        <div role="dialog" className="fixed inset-0 bg-black/50 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Create New Club</h2>
-              <button onClick={() => setShowCreateModal(false)}>×</button>
-            </div>
-            <form onSubmit={(e) => {
+        <div className="fixed inset-0 bg-slate-700/50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-md mx-auto">
+            <h2 className="text-2xl font-bold mb-4 text-gray-800">Create New Club</h2>
+            <form onSubmit={async (e) => {
               e.preventDefault();
               const formData = new FormData(e.currentTarget);
-              handleCreateClub({
+              const newClub = {
                 name: formData.get('name') as string,
                 description: formData.get('description') as string,
                 contactEmail: formData.get('contactEmail') as string,
                 contactPhone: formData.get('contactPhone') as string,
                 location: formData.get('location') as string,
-                status: 'active',
-                clubLeaderId: formData.get('clubLeaderId') as string
-              });
+                status: 'active' as 'active' | 'inactive', // Explicitly cast to the correct literal type
+              };
+              await handleCreateClub(newClub);
               setShowCreateModal(false);
-            }}>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="name">Club Name</label>
-                  <Input id="name" name="name" required />
-                </div>
-                <div>
-                  <label htmlFor="description">Description</label>
-                  <textarea id="description" name="description" required className="w-full p-2 border rounded" />
-                </div>
-                <div>
-                  <label htmlFor="contactEmail">Contact Email</label>
-                  <Input id="contactEmail" name="contactEmail" type="email" required />
-                </div>
-                <div>
-                  <label htmlFor="contactPhone">Contact Phone</label>
-                  <Input id="contactPhone" name="contactPhone" required />
-                </div>
-                <div>
-                  <label htmlFor="location">Club Room</label>
-                  <Input id="location" name="location" required />
-                </div>
-                <div>
-                  <label htmlFor="clubLeaderId">Club Leader</label>
-                  <Select
-                    name="clubLeaderId"
-                    required
-                    onValueChange={(value) => {
-                      const leader = users.find(u => u.id === value);
-                      if (leader) {
-                        setSelectedClubLeader(leader);
-                      }
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a club leader" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name} ({user.email})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button type="submit">Create Club</Button>
+            }} className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Club Name</label>
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  id="description"
+                  name="description"
+                  rows={4}
+                  required
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none bg-white text-gray-900"
+                ></textarea>
+              </div>
+              <div>
+                <label htmlFor="leader" className="block text-sm font-medium text-gray-700 mb-1">Club Leader (Optional)</label>
+                <Select onValueChange={(value) => setSelectedClubLeader(users.find(u => u.id === value) || null)}>
+                  <SelectTrigger className="w-full p-2 border border-gray-300 rounded-md focus:outline-none text-gray-800 bg-white">
+                    <SelectValue placeholder="Select a club leader" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.length > 0 ? (
+                      users.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>{u.name} ({u.email})</SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-users" disabled>No club leaders available</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+                <Input
+                  id="contactEmail"
+                  name="contactEmail"
+                  type="email"
+                  required
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+                <Input
+                  id="contactPhone"
+                  name="contactPhone"
+                  type="tel"
+                  required
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none bg-white text-gray-900"
+                />
+              </div>
+              <div>
+                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Club Room/Location</label>
+                <Input
+                  id="location"
+                  name="location"
+                  type="text"
+                  required
+                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none bg-white text-gray-900"
+                />
+              </div>
+              <div className="flex justify-end space-x-3 mt-6">
+                <Button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300 transition-colors"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
+                >
+                  Create Club
+                </Button>
               </div>
             </form>
           </div>

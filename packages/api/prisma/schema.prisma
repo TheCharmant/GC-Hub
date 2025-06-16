@@ -41,6 +41,7 @@ model User {
   club          Club?               @relation("ClubLeader")
   reports       Report[]
   notifications Notification[]
+  createdAnnouncements Announcement[] @relation("UserCreatedAnnouncements")
   stat          Stat?
 
   @@map("users")
@@ -57,20 +58,24 @@ model Club {
 }
 
 model Event {
-  id            String              @id @default(uuid())
-  title         String
-  description   String
-  date          DateTime
-  startTime     String
-  endTime       String
-  location      String
-  approved      Boolean             @default(false)
-  createdById   String
-  createdBy     User                @relation("UserCreatedEvents", fields: [createdById], references: [id])
-  clubId        String?
-  club          Club?               @relation(fields: [clubId], references: [id])
-  registrations EventRegistration[]
-  createdAt     DateTime            @default(now())
+  id                  String              @id @default(uuid())
+  title               String
+  description         String
+  date                DateTime
+  startTime           String
+  endTime             String
+  location            String
+  approved            Boolean             @default(false)
+  createdById         String
+  createdBy           User                @relation("UserCreatedEvents", fields: [createdById], references: [id])
+  clubId              String?
+  club                Club?               @relation(fields: [clubId], references: [id])
+  registrations       EventRegistration[]
+  createdAt           DateTime            @default(now())
+  eventImageUrl       String?             @map("event_image_url")
+  contactEmail        String?
+  certificateProvided Boolean             @default(false)
+  volunteerHours      Float?              @map("volunteer_hours")
 }
 
 model EventRegistration {
@@ -111,5 +116,20 @@ model Notification {
   message   String
   seen      Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model Announcement {
+  id                 String   @id @default(uuid())
+  title              String
+  description        String
+  datePosted         DateTime @default(now())
+  announcementImageUrl String?  @map("announcement_image_url")
+  clubId             String
+  club               Club     @relation(fields: [clubId], references: [id])
+  createdById        String
+  createdBy          User     @relation("UserCreatedAnnouncements", fields: [createdById], references: [id])
+  createdAt          DateTime @default(now())
+
+  @@map("announcements")
 }
 
