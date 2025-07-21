@@ -21,40 +21,41 @@ enum ReportType {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  name          String
-  passwordHash  String
-  role          Role      @default(student)
-  studentId     String?   @unique @map("student_id")
-  course        String?
-  year          Int?
-  section       String?
-  bio           String?
-  avatar        String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(student)
+  studentId    String?  @unique @map("student_id")
+  course       String?
+  year         Int?
+  section      String?
+  bio          String?
+  avatar       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Relations
-  createdEvents Event[]             @relation("UserCreatedEvents")
-  registrations EventRegistration[]
-  club          Club?               @relation("ClubLeader")
-  reports       Report[]
-  notifications Notification[]
-  createdAnnouncements Announcement[] @relation("UserCreatedAnnouncements")
-  stat          Stat?
+  createdEvents        Event[]             @relation("UserCreatedEvents")
+  registrations        EventRegistration[]
+  club                 Club?               @relation("ClubLeader")
+  reports              Report[]
+  notifications        Notification[]
+  createdAnnouncements Announcement[]      @relation("UserCreatedAnnouncements")
+  stat                 Stat?
 
   @@map("users")
 }
 
 model Club {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String
-  leaderId    String   @unique
-  leader      User     @relation("ClubLeader", fields: [leaderId], references: [id])
-  events      Event[]
-  createdAt   DateTime @default(now())
+  id           String         @id @default(uuid())
+  name         String         @unique
+  description  String
+  leaderId     String         @unique
+  leader       User           @relation("ClubLeader", fields: [leaderId], references: [id])
+  events       Event[]
+  createdAt    DateTime       @default(now())
+  Announcement Announcement[]
 }
 
 model Event {
@@ -90,13 +91,13 @@ model EventRegistration {
 }
 
 model Report {
-  id          String     @id @default(uuid())
+  id          String   @id @default(uuid())
   userId      String
-  generatedBy User       @relation(fields: [userId], references: [id])
+  generatedBy User     @relation(fields: [userId], references: [id])
   type        String
   filters     Json
   fileUrl     String
-  createdAt   DateTime   @default(now())
+  createdAt   DateTime @default(now())
 }
 
 model Stat {
@@ -119,17 +120,16 @@ model Notification {
 }
 
 model Announcement {
-  id                 String   @id @default(uuid())
-  title              String
-  description        String
-  datePosted         DateTime @default(now())
+  id                   String   @id @default(uuid())
+  title                String
+  description          String
+  datePosted           DateTime @default(now())
   announcementImageUrl String?  @map("announcement_image_url")
-  clubId             String
-  club               Club     @relation(fields: [clubId], references: [id])
-  createdById        String
-  createdBy          User     @relation("UserCreatedAnnouncements", fields: [createdById], references: [id])
-  createdAt          DateTime @default(now())
+  clubId               String
+  club                 Club     @relation(fields: [clubId], references: [id])
+  createdById          String
+  createdBy            User     @relation("UserCreatedAnnouncements", fields: [createdById], references: [id])
+  createdAt            DateTime @default(now())
 
   @@map("announcements")
 }
-
